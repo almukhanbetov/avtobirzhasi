@@ -1,0 +1,384 @@
+package service
+
+import (
+	"context"
+	"fmt"
+	"math"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+const (
+	// dailyRate is the ±1% daily price movement, identical on both sides —
+	// see components/exchange/ExchangeSimulator.tsx.
+	dailyRate = 0.01
+
+	// matchTolerancePercent is the "≈2%" gap that triggers a Match.
+	matchTolerancePercent = 2.0
+
+	// matchDeadlineWindow is how long a Match waits for both deposits
+	// before it expires.
+	matchDeadlineWindow = 48 * time.Hour
+)
+
+// ExchangeService implements the Auto Exchange engine: daily price
+// movement, automatic matching, and expiry of overdue matches. It owns its
+// own transactions directly against the pool rather than going through the
+// per-resource repositories, since match creation and expiry each touch
+// listings, buyer_requests, matches, deposits and notifications atomically
+// in a single unit of work.
+type ExchangeService struct {
+	db *pgxpool.Pool
+}
+
+// NewExchangeService creates an ExchangeService.
+func NewExchangeService(db *pgxpool.Pool) *ExchangeService {
+	return &ExchangeService{db: db}
+}
+
+// TickResult summarizes one RunDailyTick pass, returned so callers (the
+// scheduler, the manual trigger endpoint) can log/report what happened.
+type TickResult struct {
+	ListingsDecayed int `json:"listingsDecayed"`
+	RequestsGrown   int `json:"requestsGrown"`
+	MatchesCreated  int `json:"matchesCreated"`
+	MatchesExpired  int `json:"matchesExpired"`
+}
+
+// RunDailyTick performs one full daily pass: price movement, then match
+// creation, then the expiry sweep. Each call applies one more day's worth
+// of ±1% movement — cadence (real 24h ticker vs. manual trigger) is the
+// caller's concern, not this method's.
+func (s *ExchangeService) RunDailyTick(ctx context.Context) (*TickResult, error) {
+	result := &TickResult{}
+
+	decayed, err := s.decayListingPrices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("decay listing prices: %w", err)
+	}
+	result.ListingsDecayed = decayed
+
+	grown, err := s.growBuyerOffers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("grow buyer offers: %w", err)
+	}
+	result.RequestsGrown = grown
+
+	matched, err := s.createMatches(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("create matches: %w", err)
+	}
+	result.MatchesCreated = matched
+
+	expired, err := s.expireOverdueMatches(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("expire overdue matches: %w", err)
+	}
+	result.MatchesExpired = expired
+
+	return result, nil
+}
+
+// decayListingPrices applies the seller-side -1%/day to every active
+// exchange listing. GREATEST(1, ...) is a defensive floor so a listing
+// that somehow never matches can't decay to zero or negative over a very
+// long run — not part of the product spec, just a safety guard.
+func (s *ExchangeService) decayListingPrices(ctx context.Context) (int, error) {
+	// $1 MUST be cast explicitly. Left bare, Postgres infers its type from
+	// the neighboring untyped integer literal "1" and silently treats it
+	// as `integer`, truncating 0.01 to 0 — the update then "succeeds"
+	// (RowsAffected > 0) while leaving every price unchanged. No error is
+	// raised. Confirmed by hand while building this: without the cast,
+	// this query is a silent no-op.
+	tag, err := s.db.Exec(ctx, `
+		UPDATE listings
+		SET price = GREATEST(1, ROUND((price * (1 - $1::float8))::numeric)::bigint),
+		    updated_at = now()
+		WHERE is_exchange = true AND status = 'active'
+	`, dailyRate)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
+// growBuyerOffers applies the buyer-side +1%/day to every active buyer
+// request.
+func (s *ExchangeService) growBuyerOffers(ctx context.Context) (int, error) {
+	// See decayListingPrices — same explicit ::float8 cast, same reason.
+	tag, err := s.db.Exec(ctx, `
+		UPDATE buyer_requests
+		SET current_offer = ROUND((current_offer * (1 + $1::float8))::numeric)::bigint,
+		    updated_at = now()
+		WHERE status = 'active'
+	`, dailyRate)
+	if err != nil {
+		return 0, err
+	}
+	return int(tag.RowsAffected()), nil
+}
+
+type candidatePair struct {
+	ListingID      string
+	BuyerRequestID string
+}
+
+// createMatches finds every currently-matching (listing, buyer_request)
+// pair — same region/make/model, listing's year within the request's
+// range, price gap within tolerance — and tries to create a Match for
+// each. See auto-exchange-match skill: "compare Region, Make, Model,
+// Year, Price".
+func (s *ExchangeService) createMatches(ctx context.Context) (int, error) {
+	rows, err := s.db.Query(ctx, `
+		SELECT l.id, br.id
+		FROM listings l
+		JOIN buyer_requests br ON
+			br.status = 'active' AND
+			l.status = 'active' AND
+			l.is_exchange = true AND
+			l.region = br.region AND
+			l.make = br.make AND
+			l.model = br.model AND
+			l.year BETWEEN br.year_from AND br.year_to
+		WHERE l.price > 0
+		  AND abs(l.price - br.current_offer)::numeric / l.price * 100 <= $1::float8
+	`, matchTolerancePercent)
+	if err != nil {
+		return 0, err
+	}
+
+	var pairs []candidatePair
+	for rows.Next() {
+		var p candidatePair
+		if err := rows.Scan(&p.ListingID, &p.BuyerRequestID); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		pairs = append(pairs, p)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+
+	created := 0
+	for _, pair := range pairs {
+		ok, err := s.tryCreateMatch(ctx, pair)
+		if err != nil {
+			return created, err
+		}
+		if ok {
+			created++
+		}
+	}
+	return created, nil
+}
+
+// tryCreateMatch attempts to turn one candidate pair into a Match inside a
+// single transaction. It re-checks both rows' status under
+// SELECT ... FOR UPDATE first: if either side was already claimed by
+// another pair earlier in this same tick (e.g. one listing matches two
+// buyer requests simultaneously), it backs off and reports ok=false
+// instead of double-matching.
+func (s *ExchangeService) tryCreateMatch(ctx context.Context, pair candidatePair) (ok bool, err error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return false, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }() // no-op once committed
+
+	var listingStatus, listingUserID string
+	var listingPrice int64
+	err = tx.QueryRow(ctx,
+		`SELECT status, user_id, price FROM listings WHERE id = $1 FOR UPDATE`, pair.ListingID,
+	).Scan(&listingStatus, &listingUserID, &listingPrice)
+	if err != nil {
+		return false, err
+	}
+
+	var requestStatus, requestUserID string
+	err = tx.QueryRow(ctx,
+		`SELECT status, user_id FROM buyer_requests WHERE id = $1 FOR UPDATE`, pair.BuyerRequestID,
+	).Scan(&requestStatus, &requestUserID)
+	if err != nil {
+		return false, err
+	}
+
+	if listingStatus != "active" || requestStatus != "active" {
+		return false, nil
+	}
+
+	if _, err := tx.Exec(ctx,
+		`UPDATE listings SET status = 'frozen', updated_at = now() WHERE id = $1`, pair.ListingID,
+	); err != nil {
+		return false, err
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE buyer_requests SET status = 'frozen', updated_at = now() WHERE id = $1`, pair.BuyerRequestID,
+	); err != nil {
+		return false, err
+	}
+
+	finalPrice := listingPrice
+	depositAmount := int64(math.Round(float64(finalPrice) * 0.01))
+	deadline := time.Now().Add(matchDeadlineWindow)
+
+	var matchID string
+	err = tx.QueryRow(ctx, `
+		INSERT INTO matches (listing_id, buyer_request_id, final_price, deposit_amount, deadline)
+		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
+	`, pair.ListingID, pair.BuyerRequestID, finalPrice, depositAmount, deadline).Scan(&matchID)
+	if err != nil {
+		return false, err
+	}
+
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO deposits (match_id, user_id, role, amount) VALUES ($1, $2, 'seller', $3)`,
+		matchID, listingUserID, depositAmount,
+	); err != nil {
+		return false, err
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO deposits (match_id, user_id, role, amount) VALUES ($1, $2, 'buyer', $3)`,
+		matchID, requestUserID, depositAmount,
+	); err != nil {
+		return false, err
+	}
+
+	priceText := formatTenge(finalPrice)
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO notifications (user_id, type, message, related_match_id) VALUES ($1, 'match_found', $2, $3)`,
+		listingUserID, fmt.Sprintf("Найден Match по вашему объявлению — цена %s.", priceText), matchID,
+	); err != nil {
+		return false, err
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO notifications (user_id, type, message, related_match_id) VALUES ($1, 'match_found', $2, $3)`,
+		requestUserID, fmt.Sprintf("Найден Match по вашей заявке — цена %s.", priceText), matchID,
+	); err != nil {
+		return false, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+type overdueMatch struct {
+	MatchID        string
+	ListingID      string
+	BuyerRequestID string
+}
+
+// expireOverdueMatches finds every Match past its deadline that never
+// reached "confirmed" (or was already "cancelled"), and expires each one.
+func (s *ExchangeService) expireOverdueMatches(ctx context.Context) (int, error) {
+	rows, err := s.db.Query(ctx, `
+		SELECT id, listing_id, buyer_request_id
+		FROM matches
+		WHERE status NOT IN ('confirmed', 'expired', 'cancelled') AND deadline < now()
+	`)
+	if err != nil {
+		return 0, err
+	}
+
+	var overdue []overdueMatch
+	for rows.Next() {
+		var o overdueMatch
+		if err := rows.Scan(&o.MatchID, &o.ListingID, &o.BuyerRequestID); err != nil {
+			rows.Close()
+			return 0, err
+		}
+		overdue = append(overdue, o)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return 0, err
+	}
+
+	count := 0
+	for _, o := range overdue {
+		if err := s.expireMatch(ctx, o); err != nil {
+			return count, err
+		}
+		count++
+	}
+	return count, nil
+}
+
+// expireMatch unfreezes both sides back to "active" (they resume moving
+// from wherever they were frozen, not their original starting price),
+// refunds any deposit that was already paid, and notifies both parties.
+func (s *ExchangeService) expireMatch(ctx context.Context, o overdueMatch) error {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	if _, err := tx.Exec(ctx,
+		`UPDATE matches SET status = 'expired', updated_at = now() WHERE id = $1`, o.MatchID,
+	); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE listings SET status = 'active', updated_at = now() WHERE id = $1`, o.ListingID,
+	); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE buyer_requests SET status = 'active', updated_at = now() WHERE id = $1`, o.BuyerRequestID,
+	); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx,
+		`UPDATE deposits SET status = 'refunded', refunded_at = now() WHERE match_id = $1 AND status = 'paid'`,
+		o.MatchID,
+	); err != nil {
+		return err
+	}
+
+	var sellerID string
+	if err := tx.QueryRow(ctx, `SELECT user_id FROM listings WHERE id = $1`, o.ListingID).Scan(&sellerID); err != nil {
+		return err
+	}
+	var buyerID string
+	if err := tx.QueryRow(ctx, `SELECT user_id FROM buyer_requests WHERE id = $1`, o.BuyerRequestID).Scan(&buyerID); err != nil {
+		return err
+	}
+
+	const expiredMsg = "Срок Match истёк — объявление снова активно."
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO notifications (user_id, type, message, related_match_id) VALUES ($1, 'match_expired', $2, $3)`,
+		sellerID, expiredMsg, o.MatchID,
+	); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO notifications (user_id, type, message, related_match_id) VALUES ($1, 'match_expired', $2, $3)`,
+		buyerID, expiredMsg, o.MatchID,
+	); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
+}
+
+// formatTenge renders a tenge amount with space-grouped thousands, e.g.
+// 11682000 -> "11 682 000 ₸" — matches lib/format/money.ts's convention,
+// used only for notification message text.
+func formatTenge(amount int64) string {
+	digits := strconv.FormatInt(amount, 10)
+	var groups []string
+	for len(digits) > 3 {
+		groups = append([]string{digits[len(digits)-3:]}, groups...)
+		digits = digits[:len(digits)-3]
+	}
+	groups = append([]string{digits}, groups...)
+	return strings.Join(groups, " ") + " ₸"
+}

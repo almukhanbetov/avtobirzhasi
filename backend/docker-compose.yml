@@ -1,0 +1,30 @@
+# Explicit project name — do NOT remove. Docker Compose defaults to the
+# parent directory's basename ("backend") as the project name, which
+# collides with any other project also using a "backend/" folder (this
+# machine has at least one other: BASTAS/backend). An implicit collision
+# here previously destroyed another project's running container (data was
+# recovered only because it lived in a separately-named volume). Never run
+# `docker compose` for this file without this `name:` key in place.
+name: avtobirzhasi
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: avtobirzhasi_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgdata:
