@@ -13,6 +13,10 @@ Thumbs.db
 
 # Env files — defense in depth, each service's own .gitignore already
 # excludes its .env, but never let a stray one at the repo root slip in.
+# The production compose stack's real env files (see docker-compose.prod.yml)
+# live only on the VPS — .example versions of all three are committed.
 .env
 .env.local
 .env.*.local
+backend.env
+frontend.env

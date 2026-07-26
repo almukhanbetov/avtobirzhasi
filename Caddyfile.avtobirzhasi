@@ -1,0 +1,31 @@
+# This is a SNIPPET to merge into the VPS's real /etc/caddy/Caddyfile —
+# it is intentionally NOT named plain "Caddyfile" so nobody mistakes it
+# for the whole server config and overwrites what's already there.
+#
+# Before touching anything on the VPS: run `cat /etc/caddy/Caddyfile`
+# (or wherever Caddy's config actually lives there) and paste it back so
+# these two blocks can be merged in without disturbing any other site
+# already being served from that same Caddy instance.
+#
+# DNS (not done automatically — add this yourself, then wait for it to
+# propagate before Caddy can issue a certificate for it):
+#   A record   api.avtobirzhasi.kz   ->   37.140.243.250
+
+avtobirzhasi.kz, www.avtobirzhasi.kz {
+	reverse_proxy 127.0.0.1:3000
+}
+
+api.avtobirzhasi.kz {
+	# backend/internal/middleware/localonly.go's LocalOnly() authorizes
+	# purely by TCP peer address (127.0.0.1 only) — which is exactly what
+	# Caddy itself connects from when it reverse-proxies to the backend on
+	# the same host. Left unblocked here, EVERY visitor on the internet
+	# would pass LocalOnly and reach the moderation/admin-stats/daily-tick
+	# endpoints at https://api.avtobirzhasi.kz/internal/*. This must stay
+	# in place — don't remove it when merging.
+	handle /internal/* {
+		respond 404
+	}
+
+	reverse_proxy 127.0.0.1:8080
+}

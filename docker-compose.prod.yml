@@ -1,0 +1,42 @@
+# Production compose file — deployed on the VPS at $VPS_PATH, driven by
+# .github/workflows/deploy.yml (docker compose -f docker-compose.prod.yml
+# pull / up -d / ps).
+#
+# Deliberately does NOT define a postgres service. The existing database
+# on this VPS is not managed here — do not add one, and never run
+# `docker compose down -v` against this file (see backend/docker-compose.yml
+# for the story of why an implicit/careless compose project already
+# destroyed one running container once on this exact machine's sibling
+# projects).
+#
+# Both services bind to 127.0.0.1 only — Caddy (running separately on the
+# VPS, not in this file) terminates TLS and reverse-proxies to them. They
+# are not meant to be reachable directly from the internet.
+name: avtobirzhasi
+
+services:
+  backend:
+    image: ${DOCKERHUB_USERNAME}/avtobirzhasi-backend:latest
+    container_name: avtobirzhasi_backend
+    restart: unless-stopped
+    env_file:
+      - ./backend.env
+    ports:
+      - "127.0.0.1:8080:8080"
+    # Lets the backend reach a Postgres instance running directly on the
+    # VPS host (outside Docker) via the hostname "host.docker.internal".
+    # If Postgres instead runs in its own docker-compose project, remove
+    # this and attach both to a shared external network instead.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  frontend:
+    image: ${DOCKERHUB_USERNAME}/avtobirzhasi-frontend:latest
+    container_name: avtobirzhasi_frontend
+    restart: unless-stopped
+    env_file:
+      - ./frontend.env
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - backend
