@@ -1,23 +1,18 @@
 name: Deploy
-
 on:
   push:
     branches: [main]
-
 env:
   BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/avtobirzhasi-backend
   FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/avtobirzhasi-frontend
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -32,7 +27,6 @@ jobs:
           tags: ${{ env.BACKEND_IMAGE }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
       - name: Build and push frontend image
         uses: docker/build-push-action@v6
         with:
@@ -43,7 +37,6 @@ jobs:
             NEXT_PUBLIC_API_URL=https://api.avtobirzhasi.kz/api
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
