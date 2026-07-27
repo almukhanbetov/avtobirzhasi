@@ -2,33 +2,58 @@
 # .github/workflows/deploy.yml (docker compose -f docker-compose.prod.yml
 # pull / up -d / ps).
 #
-# Deliberately does NOT define a postgres service. The existing database
-# on this VPS is not managed here — do not add one, and never run
-# `docker compose down -v` against this file (see backend/docker-compose.yml
-# for the story of why an implicit/careless compose project already
-# destroyed one running container once on this exact machine's sibling
-# projects).
+# This project owns its own postgres service and named volume — verified
+# on the VPS (2026-07-26) that no avtobirzhasi database already existed;
+# the only running Postgres there (container uibirzhasi_db) belongs to a
+# different, unrelated project and must never be touched or reused.
 #
-# Both services bind to 127.0.0.1 only — Caddy (running separately on the
-# VPS, not in this file) terminates TLS and reverse-proxies to them. They
-# are not meant to be reachable directly from the internet.
+# Never run `docker compose down -v` against this file (see
+# backend/docker-compose.yml for the story of why an implicit/careless
+# compose project already destroyed one running container once on this
+# exact machine's sibling projects).
+#
+# backend/frontend bind to 127.0.0.1 only — Caddy (running separately on
+# the VPS, not in this file) terminates TLS and reverse-proxies to them.
+# postgres also binds only to 127.0.0.1, and only so a human can `psql`
+# into it directly from the VPS shell — the backend container reaches it
+# over the compose-internal network by service name ("postgres"), not
+# through that published port.
 name: avtobirzhasi
 
 services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: avtobirzhasi_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - avtobirzhasi_pgdata:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
   backend:
     image: ${DOCKERHUB_USERNAME}/avtobirzhasi-backend:latest
     container_name: avtobirzhasi_backend
     restart: unless-stopped
+    environment:
+      # Reaches postgres by compose service name, not host.docker.internal —
+      # both containers are on the same compose-managed network.
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
     env_file:
       - ./backend.env
     ports:
       - "127.0.0.1:8080:8080"
-    # Lets the backend reach a Postgres instance running directly on the
-    # VPS host (outside Docker) via the hostname "host.docker.internal".
-    # If Postgres instead runs in its own docker-compose project, remove
-    # this and attach both to a shared external network instead.
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   frontend:
     image: ${DOCKERHUB_USERNAME}/avtobirzhasi-frontend:latest
@@ -40,3 +65,6 @@ services:
       - "127.0.0.1:3000:3000"
     depends_on:
       - backend
+
+volumes:
+  avtobirzhasi_pgdata:
