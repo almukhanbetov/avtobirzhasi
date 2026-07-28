@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, Moon, Sun, X } from "lucide-react";
 import { navLinks } from "@/components/layout/nav-links";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useTheme } from "@/lib/theme/ThemeProvider";
 
 export function MobileMenu() {
   const [open, setOpen] = useState(false);
   const { user, status, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  const isDark = theme === "dark";
 
   return (
     <div className="lg:hidden">
@@ -40,6 +43,15 @@ export function MobileMenu() {
             ))}
           </nav>
           <div className="mt-4 flex flex-col gap-3 border-t border-border pt-4">
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-pressed={isDark}
+              className="flex items-center gap-2 px-3 text-left text-[15px] font-medium text-foreground"
+            >
+              {isDark ? <Sun size={16} /> : <Moon size={16} />}
+              {isDark ? "Светлая тема" : "Тёмная тема"}
+            </button>
             {status === "authenticated" && user ? (
               <>
                 <Link

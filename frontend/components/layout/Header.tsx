@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Logo } from "@/components/layout/Logo";
 import { MobileMenu } from "@/components/layout/MobileMenu";
 import { AuthStatus } from "@/components/layout/AuthStatus";
+import { ThemeToggle } from "@/components/layout/ThemeToggle";
 import { navLinks } from "@/components/layout/nav-links";
 
 export function Header() {
@@ -33,6 +34,7 @@ export function Header() {
           >
             <Heart size={20} />
           </Link>
+          <ThemeToggle />
           <AuthStatus />
           <Button href="/sell/new">Подать объявление</Button>
         </div>
