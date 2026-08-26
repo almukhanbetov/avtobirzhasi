@@ -2,7 +2,11 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
+	"net/http"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"avtobirzhasi/backend/internal/config"
@@ -15,10 +19,28 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// HTTP server timeouts — the zero-value http.Server gin.Run() would
+// otherwise use has none of these, which is a known production risk
+// (a slow/stalled client can hold a connection open indefinitely).
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 15 * time.Second
+	writeTimeout      = 30 * time.Second
+	idleTimeout       = 60 * time.Second
+	shutdownTimeout   = 15 * time.Second
+)
+
 func main() {
 	cfg := config.Load()
 
-	pool, err := db.NewPool(context.Background(), cfg.DatabaseURL)
+	// Cancelled on SIGINT/SIGTERM — both the HTTP server's shutdown wait
+	// below and the daily-tick scheduler goroutine derive from this same
+	// context, so a container stop/restart drains in-flight work instead
+	// of hard-killing it.
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	pool, err := db.NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("database connection failed: %v", err)
 	}
@@ -60,7 +82,7 @@ func main() {
 	router.Use(middleware.CORS())
 
 	api := router.Group("/api")
-	handlers.RegisterHealthRoutes(api)
+	handlers.RegisterHealthRoutes(api, pool)
 	handlers.RegisterAuthRoutes(api, authHandler, cfg.JWTSecret)
 	handlers.RegisterCarsRoutes(api, carsHandler)
 	handlers.RegisterSellersRoutes(api, sellersHandler)
@@ -85,29 +107,73 @@ func main() {
 	handlers.RegisterModerationRoutes(internal, moderationHandler)
 	handlers.RegisterAdminStatsRoutes(internal, adminStatsHandler)
 
-	go runDailyTickScheduler(exchangeService)
+	go runDailyTickScheduler(ctx, exchangeService)
 
-	log.Printf("listening on :%s", cfg.Port)
-	if err := router.Run(":" + cfg.Port); err != nil {
-		log.Fatalf("server failed: %v", err)
+	srv := &http.Server{
+		Addr:              ":" + cfg.Port,
+		Handler:           router,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+	}
+
+	go func() {
+		log.Printf("listening on :%s", cfg.Port)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			log.Fatalf("server failed: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("shutdown signal received, draining in-flight requests")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
+	defer cancel()
+	if err := srv.Shutdown(shutdownCtx); err != nil {
+		log.Printf("graceful shutdown did not complete cleanly: %v", err)
+	} else {
+		log.Println("server shut down cleanly")
 	}
 }
 
 // runDailyTickScheduler runs the Auto Exchange engine once every 24 hours
-// for the lifetime of the process. Not distributed-safe (fine for a
-// single-instance MVP — see SKILL.md's Auto Exchange engine section); use
+// for the lifetime of the process, stopping when ctx is cancelled (the
+// same signal-derived context the HTTP server shuts down on) instead of
+// being killed mid-tick. Not distributed-safe (fine for a single-instance
+// MVP — see SKILL.md's Auto Exchange engine section); use
 // POST /internal/jobs/run-daily-tick to trigger a pass on demand instead of
 // waiting for real time to pass.
-func runDailyTickScheduler(exchange *service.ExchangeService) {
+func runDailyTickScheduler(ctx context.Context, exchange *service.ExchangeService) {
 	ticker := time.NewTicker(24 * time.Hour)
 	defer ticker.Stop()
 
-	for range ticker.C {
-		result, err := exchange.RunDailyTick(context.Background())
-		if err != nil {
-			log.Printf("scheduled daily tick failed: %v", err)
-			continue
+	for {
+		select {
+		case <-ctx.Done():
+			log.Println("daily tick scheduler stopping")
+			return
+		case <-ticker.C:
+			runTickSafely(ctx, exchange)
 		}
-		log.Printf("scheduled daily tick: %+v", result)
 	}
+}
+
+// runTickSafely recovers a panic from inside RunDailyTick and logs it
+// instead of letting it crash the whole process. A panic inside an HTTP
+// handler is already caught by gin's own Recovery middleware, but this
+// background goroutine has no such net by default.
+func runTickSafely(ctx context.Context, exchange *service.ExchangeService) {
+	defer func() {
+		if r := recover(); r != nil {
+			log.Printf("daily tick panicked (recovered): %v", r)
+		}
+	}()
+
+	result, err := exchange.RunDailyTick(ctx)
+	if err != nil {
+		log.Printf("scheduled daily tick failed: %v", err)
+		return
+	}
+	log.Printf("scheduled daily tick: %+v", result)
 }

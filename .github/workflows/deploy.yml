@@ -1,13 +1,176 @@
 name: Deploy
+
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
+
+# Least-privilege default: every job only needs to read the repo (checkout).
+# No job here needs to write issues/PRs/packages, so nothing broader is
+# granted. Individual jobs don't escalate this.
+permissions:
+  contents: read
+
 env:
   BACKEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/avtobirzhasi-backend
   FRONTEND_IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/avtobirzhasi-frontend
+
 jobs:
-  build-and-push:
+  # ---------------------------------------------------------------------
+  # Quality gates — run on every push AND every PR against main. Nothing
+  # past this point (Docker build verification, the real image push, the
+  # production deploy) is allowed to run unless both of these succeed.
+  # ---------------------------------------------------------------------
+
+  backend-quality:
+    name: Backend Quality
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      # Ephemeral, CI-only Postgres — destroyed with the runner at the end
+      # of the job. Never the production database; ordinary throwaway
+      # credentials are fine here (see Stage 7 report's Secrets section).
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: avtobirzhsi_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/avtobirzhsi_test?sslmode=disable
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Install goose (matches the version pinned in backend/Dockerfile)
+        run: |
+          go install github.com/pressly/goose/v3/cmd/goose@v3.27.1
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Apply migrations to the CI test database
+        run: goose -dir migrations postgres "$TEST_DATABASE_URL" up
+
+      - name: go build
+        run: go build ./...
+
+      - name: go vet
+        run: go vet ./...
+
+      # Stage 6 established that these integration tests share one test
+      # database (self-match, price-bypass, deposit-pay fixtures) and must
+      # not run as separate concurrent packages — see
+      # STAGE6_AUTOMATED_TESTING_REPORT.md. `-p 1` is required, not
+      # optional: the bare parallel `go test ./...` produced a real
+      # Postgres deadlock (SQLSTATE 40P01) and cross-package fixture
+      # clobbering when this was verified locally.
+      - name: go test (sequential packages — shared test DB)
+        run: go test -p 1 ./...
+
+  frontend-quality:
+    name: Frontend Quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Real script names from frontend/package.json — Stage 6 added
+      # `test` (Vitest) and `lint` (ESLint); `build` and `tsc` predate it.
+      - name: Unit tests (Vitest)
+        run: npm run test
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+      - name: Production build
+        run: npm run build
+
+  # ---------------------------------------------------------------------
+  # Docker build verification — proves the real production images still
+  # build after the code changes that just passed the gates above.
+  # Neither image is pushed anywhere; this job needs no registry
+  # credentials at all.
+  # ---------------------------------------------------------------------
+  docker-build:
+    name: Docker Build Verification
+    runs-on: ubuntu-latest
+    needs: [backend-quality, frontend-quality]
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image (verification only — not pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: false
+          tags: avtobirzhasi-backend:ci-verify
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build frontend image (verification only — not pushed)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          push: false
+          tags: avtobirzhasi-frontend:ci-verify
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.avtobirzhasi.kz/api
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ---------------------------------------------------------------------
+  # Everything below only ever runs for a push to main, never for a PR —
+  # each job's own `if` enforces that independently of `needs`, since a
+  # skipped required job would already skip its dependents by default.
+  # ---------------------------------------------------------------------
+
+  build-and-push:
+    name: Build & Push Images
+    needs: [backend-quality, frontend-quality, docker-build]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: avtobirzhasi-production-deploy
+      cancel-in-progress: false
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,9 +200,16 @@ jobs:
             NEXT_PUBLIC_API_URL=https://api.avtobirzhasi.kz/api
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
   deploy:
+    name: Deploy to Production
     needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: avtobirzhasi-production-deploy
+      cancel-in-progress: false
     steps:
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
@@ -52,6 +222,14 @@ jobs:
             set -e
             cd "${{ secrets.VPS_PATH }}"
             docker compose -f docker-compose.prod.yml pull
+            # Migrations run once, from the freshly-pulled backend image,
+            # before the new backend container is started — `set -e`
+            # above means a migration failure stops this script here and
+            # the job is reported as failed, so `up -d` (and therefore
+            # the actual cutover to new containers) never runs. Goose
+            # migrations up is idempotent, so re-running this on a
+            # database already at the latest version is a safe no-op.
+            docker compose -f docker-compose.prod.yml run --rm --entrypoint sh backend -c './goose -dir migrations postgres "$DATABASE_URL" up'
             docker compose -f docker-compose.prod.yml up -d
             docker image prune -f
             docker compose -f docker-compose.prod.yml ps

@@ -1,5 +1,7 @@
 # Avtobirzhasi Project Completion Audit
 
+**Scoped update (2026-08-26)**: `STAGE6_AUTOMATED_TESTING_REPORT.md` and `STAGE7_CICD_QUALITY_GATES_REPORT.md` landed after this audit was written. Per that stage's explicit scope, only the **Automated Testing (Q)**, **CI/CD (R)**, and **Production Readiness (S)** skill sections and the **Overall Completion Score** table below were revised to reflect that work — every other section (including all P0/P1/P2 findings, the E2E table, and every other skill row) still describes the pre-Stage-6/7 codebase exactly as originally audited, and has *not* been re-verified as part of this update. Do not read an unedited section as "still true today" without re-checking it.
+
 Audit date: 2026-08-25
 Branch: `main` @ `996858a` ("fix: allow production frontend origins in CORS") + uncommitted working tree (Stage 1 admin-auth fix + i18n, matching `AVTOBIRZHASI_FUNCTIONAL_AUDIT.md` / `STAGE1_ADMIN_AUTHORIZATION_REPORT.md`)
 Scope: read-only completion audit. No code changes, no fixes, no refactors, no migrations, no deploy, no commits.
@@ -35,13 +37,15 @@ Weighted per the requested formula:
 | User-facing features (Auth, Notifications, Search, Admin, Frontend) | 20% | 61% | 12.2 |
 | Security | 15% | 72% | 10.8 |
 | Data integrity (Database) | 10% | 80% | 8.0 |
-| Automated testing | 8% | 5% | 0.4 |
-| CI/CD | 5% | 30% | 1.5 |
-| Production operations | 7% | 40% | 2.8 |
+| Automated testing | 8% | 38% | 3.0 |
+| CI/CD | 5% | 78% | 3.9 |
+| Production operations | 7% | 70% | 4.9 |
 
 ```
-Overall Project Completion ≈ 23.8 + 12.2 + 10.8 + 8.0 + 0.4 + 1.5 + 2.8 = 59.5%  ≈  60%
+Overall Project Completion ≈ 23.8 + 12.2 + 10.8 + 8.0 + 3.0 + 3.9 + 4.9 = 66.6%  ≈  67%
 ```
+
+*(Automated testing/CI-CD scores per Stage 6/7 (2026-08-26); Production operations revised again 2026-08-26 per Stage 8 (`STAGE8_PRODUCTION_READINESS_REPORT.md`) — health checks, graceful shutdown, timeouts, DB pool limits, and a verified backup/restore mechanism all landed. The other four rows are unchanged from the original 2026-08-25 audit and were not re-verified in this update. Production admin migration status and live Caddy/TLS state remain NOT VERIFIED — no VPS access exists from this environment — so this total should not be read as confirming anything about the live production system itself, only the code/config in this repository.)*
 
 Sub-scores (§ Code Complete vs Feature Complete vs Production Ready for full reasoning):
 
@@ -80,13 +84,13 @@ The single core mechanic (Auto Exchange) works end-to-end and is genuinely the p
 | J. Search & Filters | PARTIAL | 55% | Homepage quick-search is non-functional (static link, hardcoded model list) |
 | K. Admin Panel | PARTIAL | 32% | 8 of 10 sections are stub placeholders, no backend behind them |
 | L. Background Jobs | MOSTLY COMPLETE | 70% | Single ticker only; no retries, no distributed-safety (documented as accepted for MVP) |
-| M. Database Integrity | MOSTLY COMPLETE | 80% | 3 dead enum values; migrations not auto-run in prod deploy |
+| M. Database Integrity | MOSTLY COMPLETE | 80% | 3 dead enum values; migrations now auto-run in the deploy pipeline (Stage 7) — score unchanged since this row covers schema/constraint completeness, not deploy operations (see S); backup/restore mechanism added Stage 8, tracked under S |
 | N. Frontend Completeness | PARTIAL | 55% | Stub admin, broken search, fake description, no edit/delete actions anywhere in dashboard rows |
-| O. Backend API Completeness | MOSTLY COMPLETE | 70% | Malformed UUID → 500 not 400; some endpoints (listing PATCH/DELETE, request PATCH) unreachable from any UI |
-| P. Security | MOSTLY COMPLETE | 72% | Self-match gap, price-bypass gap, malformed-ID 500, no rate limiting, no admin audit trail |
-| Q. Automated Testing | STUB | 5% | Zero backend test files, no frontend test script, no E2E framework |
-| R. CI/CD | PARTIAL | 30% | No test/lint gate; deploys to prod on every `main` push; migrations run manually |
-| S. Production Readiness | PARTIAL | 40% | No app-container health checks, no graceful shutdown, no backup/observability story, manual Caddy merge, admin migration not applied in prod |
+| O. Backend API Completeness | MOSTLY COMPLETE | 70% | Malformed UUID → 500 not 400; some endpoints (listing PATCH/DELETE, request PATCH) unreachable from any UI. *(Stage 8 added graceful shutdown/timeouts/pool config/health-check to the same process — real, verified reliability work, but scored under Production Readiness (S) since this row's own rubric is API-surface completeness, which those changes don't affect; score unchanged.)* |
+| P. Security | MOSTLY COMPLETE | 72% | Self-match gap, price-bypass gap, malformed-ID 500, no rate limiting, no admin audit trail. *(Stage 8 re-audited secrets/CORS and found no new issue and no regression — no new gap, but also no fix to any gap listed here; score unchanged. Security headers (HSTS/CSP/etc.) remain unadded, tracked under S.)* |
+| Q. Automated Testing | PARTIAL | 38% | *(updated 2026-08-26)* Stage 6 added 22 backend tests (self-match, price/offer bypass, deposit pay/double-pay/ownership, decay/growth math, expiry idempotency, phone normalization) and 33 frontend tests (filters, formatting, phone validation, URL params) — all pure logic/integration, zero component tests, zero E2E, no auth-service/repository/admin/moderation/dashboard coverage |
+| R. CI/CD | MOSTLY COMPLETE | 78% | *(updated 2026-08-26)* Stage 7 added backend/frontend/Docker quality gates before deploy, PR checks, migration-failure protection, deploy concurrency control, least-privilege permissions — not yet exercised on GitHub's real infrastructure, no post-deploy smoke test, no automated rollback |
+| S. Production Readiness | PARTIAL | 70% | *(updated 2026-08-26, Stage 8)* DB-aware health checks, Docker healthchecks, graceful shutdown, server timeouts, DB pool limits, panic-safe background jobs, and a verified backup/restore mechanism all landed and were live-verified locally; still open: no backup schedule/off-host storage, no log aggregation/alerting, no security headers, admin migration + Caddy-live status remain NOT VERIFIED (no VPS access) |
 | T. Product Completeness | PARTIAL | 65% | Golden-path works; self-service flows and admin/backoffice don't |
 
 **Completion criteria reminder**: a skill can only reach 100% if code, DB support, working API, working frontend, correct permissions, *and* automated tests all exist. Given automated tests are effectively absent project-wide, **no skill in this project qualifies for a true 100%** under the stated rubric — the ceiling for every row above is capped by the missing test category regardless of how solid the implementation is.
@@ -230,31 +234,42 @@ Confirmed gaps:
 - No audit trail for admin actions (who approved/rejected what, who ran a manual tick) — `moderation.go`/`jobs.go` write no actor-attributed log.
 - Admin-authorization fix is real in code but its migration has not been run against production (see Manual Developer Dependencies) — until it is, production is still running on the pre-fix schema.
 
-## Testing Completion — Q. Automated Testing: STUB, 5%
-Directly re-run this pass:
-```
-go test ./...  →  [no test files]  (all 9 backend packages)
-```
-`frontend/package.json` `scripts` block has `dev`, `build`, `start`, `lint` — **no `test` script**, and no test framework (`jest`, `vitest`, `playwright`, `@testing-library/*`) appears in `dependencies`/`devDependencies`. No `*_test.go`, `*.test.ts(x)`, or `*.spec.ts(x)` files exist anywhere in the repo (confirmed by `find`). Every piece of verification that has ever happened on this project — including this audit — has been manual/live black-box testing, not a regression suite. The 5% reflects that build/vet cleanliness at least gives *some* mechanical assurance; it is not test coverage.
+## Testing Completion — Q. Automated Testing: PARTIAL, 38% *(updated 2026-08-26 — see STAGE6_AUTOMATED_TESTING_REPORT.md)*
+Original finding (2026-08-25, now stale): `go test ./...` → `[no test files]` for all 9 backend packages; no frontend `test` script; zero `*_test.go`/`*.test.ts(x)` files anywhere.
 
-## CI/CD Completion — R. CI/CD: PARTIAL, 30%
-`.github/workflows/deploy.yml` (read in full this pass): triggers on every push to `main`, builds and pushes both Docker images, then SSHes into the VPS and runs `docker compose -f docker-compose.prod.yml pull && up -d`. That's the entire pipeline.
-- No `go build`/`go vet`/`go test` step.
-- No `npm run lint`/`npm run build` step.
-- No migration step (`goose up` is never invoked by CI or by the container).
-- No rollback mechanism beyond manually re-running the workflow against an older commit.
-- A broken build would be caught (Docker build fails → job fails → no deploy), but a logically broken change that still compiles ships straight to production with nothing to catch it.
+**Current state**: Stage 6 closed the zero-coverage gap for the two money-relevant code paths this audit flagged as having "no regression protection at all" (§ Project Definition of Done, Quality DoD):
+- Backend: 22 tests across `phone_test.go`, `deposits_test.go`, `exchange_test.go` (service layer) and `listings_update_test.go`, `requests_update_test.go` (handler layer, real HTTP via `httptest`). Directly covers: self-match is never created (the exact Stage 2 regression), `PATCH price`/`currentOffer` bypass rejection (the other Stage 2 regression), the full deposit-pay flow to `confirmed`, double-pay rejection, wrong-user rejection, a failing payment provider leaving state untouched, daily decay/growth math, overdue-match expiry with refund, and daily-tick idempotency. Runs against a dedicated `avtobirzhsi_test` database, never the dev/prod database.
+- Frontend: `vitest` + `@testing-library/react` newly installed (there was none before); 33 tests covering `parseCarFilters`/`countActiveFilters`, `formatTenge`/`formatMileage`, `pluralizeCars`, the phone-normalization Zod schema (cross-checked against the backend's own normalization), and `buildHref`/`getParam`. All pure-logic — **no component was ever rendered/tested**.
+- Still zero coverage: `AuthService` (register/login/JWT issuance), any repository in isolation, admin/moderation/dashboard/notification handlers, and everything in the frontend that isn't a pure `lib`/`features` function (i.e. no component, page, or hook has a test).
+- 38% reflects real, targeted regression protection on the two highest-risk mechanics existing where there was none, while most of the codebase (by file count) remains as untested as before.
 
-## Production Readiness — S. Production Readiness: PARTIAL, 40%
-`docker-compose.prod.yml` and `Caddyfile.avtobirzhasi` read in full this pass:
-- `restart: unless-stopped` on all three services; Postgres has a real `healthcheck` (`pg_isready`) gating backend startup via `depends_on: condition: service_healthy`.
-- **Backend and frontend containers have no healthcheck of their own** — only Postgres does.
-- No graceful-shutdown handling in `cmd/api/main.go` — `router.Run(...)` blocks directly with no `signal.NotifyContext`/`http.Server.Shutdown`, so a SIGTERM during deploy hard-kills in-flight requests rather than draining them.
-- Caddy config is explicitly a *snippet* the operator must hand-merge into the VPS's real Caddy config — not automated, not verifiable from this repo whether it's actually live in production today (both this audit and the prior one flag this as unverifiable without VPS access).
-- No backup strategy documented anywhere for the `avtobirzhasi_pgdata` volume.
-- No logging/observability stack — `log.Printf`/`gin.Default()`'s own request log to stdout only, no structured logging, no error-tracking integration (Sentry etc.), no metrics.
-- Secrets via `.env`/`backend.env`/`frontend.env` files, not a secrets manager — acceptable for this scale, not a blocker.
-- The admin-role migration (`00009`) has not been confirmed run against production.
+## CI/CD Completion — R. CI/CD: MOSTLY COMPLETE, 78% *(updated 2026-08-26 — see STAGE7_CICD_QUALITY_GATES_REPORT.md)*
+Original finding (2026-08-25, now stale): `.github/workflows/deploy.yml` triggered on every push to `main`, built and pushed both Docker images, then SSHed into the VPS and ran `docker compose pull && up -d` — no test/lint/build/migration gate of any kind.
+
+**Current state**: Stage 7 restructured the same workflow into `backend-quality` → `frontend-quality` → `docker-build` → `build-and-push` → `deploy`, wired with `needs` so any gate failing blocks the production push and the SSH deploy:
+- `backend-quality`: `go build`/`go vet`/`go test -p 1 ./...` against a GitHub Actions Postgres 17 service container, migrated with the project's own Goose migrations — never production data.
+- `frontend-quality`: `npm run test` (Vitest), `npm run lint`, `npx tsc --noEmit`, `npm run build` — the real scripts from `frontend/package.json`, no new framework introduced.
+- `docker-build`: both production Dockerfiles actually build (verified locally this stage too), `push: false`, no registry credentials needed — catches a Docker-specific failure one job earlier than before, and now also runs on every PR.
+- Now also triggers on `pull_request` — a PR gets the same three gates without ever reaching the real image push or the SSH deploy (enforced by `needs` and a belt-and-suspenders `if: github.event_name == 'push' && ...`).
+- **New**: a migration step (`docker compose run --rm --entrypoint sh backend -c './goose ... up'`) now runs automatically before `up -d`, using the same `set -e` the script already had — a migration failure now blocks the deploy instead of migrations simply never running. This directly narrows (does not fully close — see below) Manual Developer Dependency #2.
+- **New**: `concurrency` on `build-and-push`/`deploy` prevents two overlapping production deploys; `timeout-minutes` on every job; workflow-level `permissions: contents: read` (was previously unset/default).
+- Still open: none of this has run on GitHub's real infrastructure yet (verified locally + by structural review only, per `STAGE7_CICD_QUALITY_GATES_REPORT.md`'s Remaining CI/CD Risks); no post-deploy smoke test; no automated rollback beyond re-running an older workflow run.
+
+## Production Readiness — S. Production Readiness: PARTIAL, 70% *(updated 2026-08-26 — see STAGE8_PRODUCTION_READINESS_REPORT.md)*
+Original findings (2026-08-25, now stale except where noted): `restart: unless-stopped` on all three services was already in place; Postgres already had a real `healthcheck` gating backend startup.
+
+**Current state (Stage 8)**:
+- **Health checks — closed.** `/api/health` now checks DB connectivity via `pool.Ping` and returns 503 if unreachable (previously a static `{"status":"ok"}` that proved nothing about the database). Live-verified locally (200 → stop DB → 503 → restart DB → 200).
+- **Docker healthcheck — closed.** `backend`/`frontend` containers now both have a real `healthcheck` (`wget --spider`), verified to actually pass/fail correctly inside the built images; `frontend`'s `depends_on` upgraded to `condition: service_healthy` on `backend`. Previously only Postgres had one.
+- **Graceful shutdown — closed.** `cmd/api/main.go` now uses `signal.NotifyContext` + an explicit `http.Server` + `Shutdown(ctx)`, live-verified with a real SIGTERM (drains, logs, exits cleanly — no force-kill needed).
+- **Server timeouts — closed.** `ReadHeaderTimeout`/`ReadTimeout`/`WriteTimeout`/`IdleTimeout` added; previously Gin's zero-value defaults (none) applied.
+- **DB pool — closed.** Explicit `MaxConns=10`/`MinConns=2`/lifetime/idle limits added (previously pgx's silent implicit defaults); startup `Ping` is now bounded-retried (~20s) instead of a single all-or-nothing check.
+- **Background job lifecycle — closed.** The daily-tick scheduler now stops cleanly on shutdown and recovers a panic instead of crashing the whole process (a real, previously-unprotected gap — a panic in this specific goroutine wasn't caught by Gin's `Recovery()` middleware, unlike a panic inside an HTTP handler).
+- **Backups — closed (mechanism).** `scripts/backup-db.sh`/`scripts/restore-db.sh` added and verified end-to-end (backup, restore into a scratch DB, and the restore script's refusal to target the production DB name) against the local dev database. **Not yet scheduled** on the VPS (no cron/systemd timer wired — that remains a manual step for a human operator with VPS access) and **no off-host backup storage** exists yet.
+- **Caddy config is still just a snippet** — correct as written (Caddy's automatic HTTPS + HTTP→HTTPS redirect, `/internal/*` blocked), unchanged by Stage 8, still not verifiable from this repo whether it's actually merged live on the VPS.
+- **The admin-role migration (`00009`) still has not been confirmed run against production** — Stage 7 made the deploy pipeline run migrations automatically going forward, but that doesn't retroactively confirm history; this remains `NOT VERIFIED`, not `PASS`, per Stage 8's explicit finding.
+- Still open, unchanged: no log aggregation/alerting (stdout-only, nothing pages a human on repeated failure), no structured logging, no error-tracking integration, no security headers (HSTS/CSP/etc.) in Caddy, no off-host backup destination, multi-instance job safety remains explicitly out of scope by design.
+- Secrets via `.env`/`backend.env`/`frontend.env` files, not a secrets manager — unchanged, still acceptable for this scale, re-confirmed clean (no real secret committed) by Stage 8's own re-audit.
 
 ---
 

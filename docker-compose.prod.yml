@@ -54,6 +54,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    healthcheck:
+      # /api/health itself checks DB connectivity (see
+      # backend/internal/handlers/health.go) and returns 503 if the
+      # database is unreachable, so this genuinely verifies the backend
+      # can serve real requests — not just that the process is running.
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   frontend:
     image: ${DOCKERHUB_USERNAME}/avtobirzhasi-frontend:latest
@@ -64,7 +74,14 @@ services:
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
 volumes:
   avtobirzhasi_pgdata:
