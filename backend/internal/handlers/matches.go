@@ -60,7 +60,10 @@ func (h *MatchesHandler) ListMine(c *gin.Context) {
 // frontend-cached status for this. See SKILL.md's Contact unlock rule.
 func (h *MatchesHandler) Get(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
-	id := c.Param("id")
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	m, err := h.matches.GetByID(c.Request.Context(), id)
 	if errors.Is(err, repository.ErrNotFound) {

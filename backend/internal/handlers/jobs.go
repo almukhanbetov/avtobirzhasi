@@ -8,9 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// JobsHandler exposes internal, non-public endpoints for manually
-// triggering scheduled jobs during development instead of waiting for the
-// real cadence.
+// JobsHandler exposes internal endpoints for manually triggering scheduled
+// jobs during development instead of waiting for the real cadence. Mounted
+// behind middleware.LocalOnly() + middleware.Auth() + middleware.AdminOnly()
+// (see cmd/api/main.go) since a manual tick moves prices/matches/deposits.
 type JobsHandler struct {
 	exchange *service.ExchangeService
 }
@@ -21,7 +22,8 @@ func NewJobsHandler(exchange *service.ExchangeService) *JobsHandler {
 }
 
 // RegisterJobsRoutes wires the internal routes. Callers must mount this
-// under a router group protected by middleware.LocalOnly().
+// under a router group protected by middleware.LocalOnly(),
+// middleware.Auth() and middleware.AdminOnly().
 func RegisterJobsRoutes(router *gin.RouterGroup, h *JobsHandler) {
 	router.POST("/jobs/run-daily-tick", h.RunDailyTick)
 }

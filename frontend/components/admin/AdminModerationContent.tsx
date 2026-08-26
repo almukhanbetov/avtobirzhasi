@@ -8,24 +8,29 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { formatTenge } from "@/lib/format/money";
 import { approveListing, listPendingListings, rejectListing } from "@/lib/api/moderation";
 import { ApiError } from "@/lib/api/client";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 const PENDING_KEY = ["admin", "pending-listings"];
 
 export function AdminModerationContent() {
+  const { t } = useLanguage();
+  const { token } = useAuth();
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
     queryKey: PENDING_KEY,
-    queryFn: listPendingListings,
+    queryFn: () => listPendingListings(token!),
+    enabled: !!token,
   });
 
   const approveMutation = useMutation({
-    mutationFn: (id: string) => approveListing(id),
+    mutationFn: (id: string) => approveListing(id, token!),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PENDING_KEY }),
   });
 
   const rejectMutation = useMutation({
-    mutationFn: (id: string) => rejectListing(id),
+    mutationFn: (id: string) => rejectListing(id, token!),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: PENDING_KEY }),
   });
 
@@ -35,11 +40,10 @@ export function AdminModerationContent() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-[28px] font-semibold tracking-tight text-foreground sm:text-[32px]">
-          Модерация объявлений
+          {t("admin.moderation.title")}
         </h1>
         <p className="text-[15px] text-muted-foreground">
-          Внутренний инструмент — доступен только с этой же машины, где
-          запущен бэкенд (см. middleware.LocalOnly на сервере).
+          {t("admin.moderation.subtitle")}
         </p>
       </div>
 
@@ -47,7 +51,7 @@ export function AdminModerationContent() {
         <p className="text-[13px] text-destructive">
           {actionError instanceof ApiError
             ? actionError.message
-            : "Не удалось обработать объявление"}
+            : t("admin.moderation.genericError")}
         </p>
       ) : null}
 
@@ -58,8 +62,8 @@ export function AdminModerationContent() {
         </div>
       ) : isError ? (
         <EmptyState
-          title="Не удалось загрузить очередь модерации"
-          description="Сервер временно недоступен. Попробуйте обновить страницу через минуту."
+          title={t("admin.moderation.loadErrorTitle")}
+          description={t("cars.empty.error.description")}
         />
       ) : data && data.length > 0 ? (
         <div className="flex flex-col gap-4">
@@ -91,7 +95,7 @@ export function AdminModerationContent() {
                   </span>
                   <span className="text-[13px] text-muted-foreground">
                     {listing.region} · {listing.sellerName}
-                    {listing.isExchange ? " · Автобиржа" : ""}
+                    {listing.isExchange ? ` · ${t("home.exchange.eyebrow")}` : ""}
                   </span>
                 </div>
 
@@ -106,14 +110,14 @@ export function AdminModerationContent() {
                       onClick={() => rejectMutation.mutate(listing.id)}
                       disabled={isBusy}
                     >
-                      {isRejecting ? "Отклоняем…" : "Отклонить"}
+                      {isRejecting ? t("admin.moderation.rejecting") : t("admin.moderation.reject")}
                     </Button>
                     <Button
                       size="md"
                       onClick={() => approveMutation.mutate(listing.id)}
                       disabled={isBusy}
                     >
-                      {isApproving ? "Одобряем…" : "Одобрить"}
+                      {isApproving ? t("admin.moderation.approving") : t("admin.moderation.approve")}
                     </Button>
                   </div>
                 </div>
@@ -123,8 +127,8 @@ export function AdminModerationContent() {
         </div>
       ) : (
         <EmptyState
-          title="Очередь модерации пуста."
-          description="Новые объявления появятся здесь сразу после размещения."
+          title={t("admin.moderation.emptyTitle")}
+          description={t("admin.moderation.emptyDescription")}
         />
       )}
     </div>

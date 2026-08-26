@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminSettingsPage() {
-  return <AdminComingSoon title="Настройки" />;
+  return <AdminComingSoon titleKey="admin.settings.title" />;
 }

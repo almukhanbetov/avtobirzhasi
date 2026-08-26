@@ -6,9 +6,11 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { NotificationItem } from "@/components/dashboard/NotificationItem";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { listMyNotifications, markNotificationRead } from "@/lib/api/notifications";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function NotificationsContent() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError } = useQuery({
@@ -31,10 +33,10 @@ export function NotificationsContent() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-[28px] font-semibold tracking-tight text-foreground sm:text-[32px]">
-          Уведомления
+          {t("dashboard.nav.notifications")}
         </h1>
         <p className="text-[15px] text-muted-foreground">
-          Обновления по вашим объявлениям, заявкам и сделкам.
+          {t("dashboard.notifications.subtitle")}
         </p>
       </div>
 
@@ -46,8 +48,8 @@ export function NotificationsContent() {
         </div>
       ) : isError ? (
         <EmptyState
-          title="Не удалось загрузить уведомления"
-          description="Сервер временно недоступен. Попробуйте обновить страницу через минуту."
+          title={t("dashboard.notifications.loadErrorTitle")}
+          description={t("cars.empty.error.description")}
         />
       ) : data && data.length > 0 ? (
         <div className="flex flex-col gap-3">
@@ -61,8 +63,8 @@ export function NotificationsContent() {
         </div>
       ) : (
         <EmptyState
-          title="Уведомлений пока нет."
-          description="Здесь появятся обновления по вашим объявлениям и сделкам."
+          title={t("dashboard.notifications.emptyTitle")}
+          description={t("dashboard.notifications.emptyDescription")}
         />
       )}
     </div>

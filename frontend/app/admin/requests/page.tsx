@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminRequestsPage() {
-  return <AdminComingSoon title="Заявки на покупку" />;
+  return <AdminComingSoon titleKey="dashboard.nav.requests" />;
 }

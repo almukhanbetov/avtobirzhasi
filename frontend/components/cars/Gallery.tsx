@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { ChevronLeft, ChevronRight, Expand, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function Gallery({
   images,
@@ -12,6 +13,7 @@ export function Gallery({
   images: string[];
   title: string;
 }) {
+  const { t } = useLanguage();
   const [active, setActive] = useState(0);
   const [fullscreen, setFullscreen] = useState(false);
 
@@ -60,7 +62,7 @@ export function Gallery({
             key={`${src}-${index}`}
             type="button"
             onClick={() => setActive(index)}
-            aria-label={`Показать фото ${index + 1}`}
+            aria-label={`${t("gallery.showPhoto")} ${index + 1}`}
             className={cn(
               "relative aspect-[4/3] overflow-hidden rounded-xl border transition-colors",
               index === active
@@ -87,7 +89,7 @@ export function Gallery({
             </span>
             <button
               type="button"
-              aria-label="Закрыть галерею"
+              aria-label={t("gallery.close")}
               onClick={() => setFullscreen(false)}
               className="flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
             >
@@ -108,7 +110,7 @@ export function Gallery({
               <>
                 <button
                   type="button"
-                  aria-label="Предыдущее фото"
+                  aria-label={t("gallery.prev")}
                   onClick={prev}
                   className="absolute left-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
                 >
@@ -116,7 +118,7 @@ export function Gallery({
                 </button>
                 <button
                   type="button"
-                  aria-label="Следующее фото"
+                  aria-label={t("gallery.next")}
                   onClick={next}
                   className="absolute right-4 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
                 >

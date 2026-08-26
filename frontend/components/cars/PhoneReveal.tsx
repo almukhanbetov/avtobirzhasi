@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { Phone } from "lucide-react";
 import { Button } from "@/components/ui/Button";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function PhoneReveal({ phone }: { phone: string }) {
+  const { t } = useLanguage();
   const [revealed, setRevealed] = useState(false);
 
   if (revealed) {
@@ -27,7 +29,7 @@ export function PhoneReveal({ phone }: { phone: string }) {
       onClick={() => setRevealed(true)}
     >
       <Phone size={17} />
-      Показать номер
+      {t("phone.reveal")}
     </Button>
   );
 }

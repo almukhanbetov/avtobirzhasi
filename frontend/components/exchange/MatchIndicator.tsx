@@ -1,7 +1,12 @@
+"use client";
+
 import { GitMerge } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function MatchIndicator({ className }: { className?: string }) {
+  const { t } = useLanguage();
+
   return (
     <span
       className={cn(
@@ -10,7 +15,7 @@ export function MatchIndicator({ className }: { className?: string }) {
       )}
     >
       <GitMerge size={14} strokeWidth={2.5} />
-      Автобиржа
+      {t("home.exchange.eyebrow")}
     </span>
   );
 }

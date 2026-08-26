@@ -37,7 +37,10 @@ func main() {
 
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	exchangeService := service.NewExchangeService(pool)
-	depositService := service.NewDepositService(pool)
+	// MockPaymentProvider is the only PaymentProvider implemented today —
+	// see service/payment.go's doc comment. Swapping in a real gateway
+	// later only changes this one line.
+	depositService := service.NewDepositService(pool, service.NewMockPaymentProvider())
 
 	authHandler := handlers.NewAuthHandler(authService)
 	carsHandler := handlers.NewCarsHandler(listingRepo)
@@ -69,7 +72,15 @@ func main() {
 	handlers.RegisterNotificationsRoutes(api, notificationsHandler, cfg.JWTSecret)
 	handlers.RegisterDashboardRoutes(api, dashboardHandler, cfg.JWTSecret)
 
-	internal := router.Group("/internal", middleware.LocalOnly())
+	// LocalOnly stays as a network-layer belt-and-suspenders check, but per
+	// the functional audit it must not be the *only* proof of admin
+	// access — Auth + AdminOnly require an actual users.role='admin'
+	// account (see middleware/admin.go) on top of it.
+	internal := router.Group("/internal",
+		middleware.LocalOnly(),
+		middleware.Auth(cfg.JWTSecret),
+		middleware.AdminOnly(userRepo),
+	)
 	handlers.RegisterJobsRoutes(internal, jobsHandler)
 	handlers.RegisterModerationRoutes(internal, moderationHandler)
 	handlers.RegisterAdminStatsRoutes(internal, adminStatsHandler)

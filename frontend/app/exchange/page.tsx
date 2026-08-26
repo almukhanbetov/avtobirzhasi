@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Container } from "@/components/ui/Container";
-import { SectionHeader } from "@/components/ui/SectionHeader";
+import { ExchangeVisualizationHeader } from "@/components/exchange/ExchangeVisualizationHeader";
 import { ExchangeHero } from "@/components/exchange/ExchangeHero";
 import { ExchangeSimulator } from "@/components/exchange/ExchangeSimulator";
 import { ExchangeSteps } from "@/components/exchange/ExchangeSteps";
@@ -21,12 +21,7 @@ export default function ExchangePage() {
 
       <section className="py-20 sm:py-28">
         <Container className="flex flex-col gap-12">
-          <SectionHeader
-            align="center"
-            eyebrow="Визуализация"
-            title="Как сближаются цены"
-            description="Передвиньте ползунок или запустите воспроизведение — посмотрите, как цена продавца и предложение покупателя сходятся день за днём."
-          />
+          <ExchangeVisualizationHeader />
           <ExchangeSimulator />
         </Container>
       </section>

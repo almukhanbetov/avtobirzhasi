@@ -33,3 +33,30 @@ export function createListing(token: string, input: CreateListingInput): Promise
     body: input,
   });
 }
+
+export interface UpdateListingInput {
+  price?: number;
+  mileageKm?: number;
+  description?: string;
+  region?: string;
+  color?: string;
+}
+
+export function updateListing(
+  token: string,
+  id: string,
+  input: UpdateListingInput,
+): Promise<Car> {
+  return apiFetch<Car>(`/listings/${id}`, {
+    method: "PATCH",
+    token,
+    body: input,
+  });
+}
+
+export function archiveListing(token: string, id: string): Promise<void> {
+  return apiFetch<void>(`/listings/${id}`, {
+    method: "DELETE",
+    token,
+  });
+}

@@ -5,9 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut, User } from "lucide-react";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function AuthStatus() {
   const { user, status, logout } = useAuth();
+  const { t } = useLanguage();
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -29,7 +31,7 @@ export function AuthStatus() {
             {/* Invisible full-screen backdrop to close the menu on outside click. */}
             <button
               type="button"
-              aria-label="Закрыть меню"
+              aria-label={t("header.closeMenu")}
               onClick={() => setOpen(false)}
               className="fixed inset-0 z-40 cursor-default"
             />
@@ -39,7 +41,7 @@ export function AuthStatus() {
                 onClick={() => setOpen(false)}
                 className="px-4 py-3 text-[14px] font-medium text-foreground hover:bg-black/[0.04]"
               >
-                Личный кабинет
+                {t("header.dashboard")}
               </Link>
               <button
                 type="button"
@@ -51,7 +53,7 @@ export function AuthStatus() {
                 className="flex items-center gap-2 border-t border-border px-4 py-3 text-left text-[14px] font-medium text-muted-foreground transition-colors hover:bg-black/[0.04] hover:text-foreground"
               >
                 <LogOut size={15} />
-                Выйти
+                {t("header.logout")}
               </button>
             </div>
           </>
@@ -66,7 +68,7 @@ export function AuthStatus() {
       className="flex items-center gap-2 text-[15px] font-medium text-foreground/80 transition-colors hover:text-foreground"
     >
       <User size={18} />
-      Войти
+      {t("header.login")}
     </Link>
   );
 }

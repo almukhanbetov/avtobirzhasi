@@ -30,7 +30,11 @@ func RegisterSellersRoutes(router *gin.RouterGroup, h *SellersHandler) {
 // Get handles GET /api/sellers/:id — the car detail page's "Продавец"
 // card.
 func (h *SellersHandler) Get(c *gin.Context) {
-	user, err := h.users.FindByID(c.Request.Context(), c.Param("id"))
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	user, err := h.users.FindByID(c.Request.Context(), id)
 	if errors.Is(err, repository.ErrNotFound) {
 		respondError(c, http.StatusNotFound, "NOT_FOUND", "Продавец не найден")
 		return

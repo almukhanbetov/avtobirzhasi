@@ -35,6 +35,7 @@ export interface Car {
   imageUrl: string;
   images: string[];
   sellerId: string;
+  description?: string;
   isExchange?: boolean;
   exchangeRole?: ExchangeRole;
   dailyChangePercent?: number;

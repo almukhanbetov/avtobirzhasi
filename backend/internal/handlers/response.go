@@ -25,6 +25,7 @@ type userResponse struct {
 	Email        *string `json:"email,omitempty"`
 	Region       *string `json:"region,omitempty"`
 	AccountType  string  `json:"accountType"`
+	Role         string  `json:"role"`
 	Rating       float64 `json:"rating"`
 	ReviewsCount int     `json:"reviewsCount"`
 	Since        string  `json:"since"`
@@ -38,6 +39,7 @@ func toUserResponse(u *models.User) userResponse {
 		Email:        u.Email,
 		Region:       u.Region,
 		AccountType:  u.AccountType,
+		Role:         u.Role,
 		Rating:       u.Rating,
 		ReviewsCount: u.ReviewsCount,
 		Since:        formatSince(u.CreatedAt),

@@ -102,7 +102,11 @@ func (h *CarsHandler) List(c *gin.Context) {
 // found for this unauthenticated public endpoint — moderation/frozen/
 // archived listings are not guessable by id from the public site.
 func (h *CarsHandler) Get(c *gin.Context) {
-	listing, err := h.listings.GetByID(c.Request.Context(), c.Param("id"))
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	listing, err := h.listings.GetByID(c.Request.Context(), id)
 	if errors.Is(err, repository.ErrNotFound) || (err == nil && listing.Status != "active") {
 		respondError(c, http.StatusNotFound, "NOT_FOUND", "Автомобиль не найден")
 		return
@@ -118,7 +122,11 @@ func (h *CarsHandler) Get(c *gin.Context) {
 // Similar handles GET /api/cars/:id/similar — up to 4 other active
 // listings sharing the same body type or make.
 func (h *CarsHandler) Similar(c *gin.Context) {
-	listing, err := h.listings.GetByID(c.Request.Context(), c.Param("id"))
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+	listing, err := h.listings.GetByID(c.Request.Context(), id)
 	if errors.Is(err, repository.ErrNotFound) {
 		respondError(c, http.StatusNotFound, "NOT_FOUND", "Автомобиль не найден")
 		return

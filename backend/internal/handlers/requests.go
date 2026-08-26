@@ -27,6 +27,7 @@ func NewRequestsHandler(requests *repository.BuyerRequestRepository) *RequestsHa
 func RegisterRequestsRoutes(router *gin.RouterGroup, h *RequestsHandler, jwtSecret string) {
 	router.POST("/requests", middleware.Auth(jwtSecret), h.Create)
 	router.PATCH("/requests/:id", middleware.Auth(jwtSecret), h.Update)
+	router.DELETE("/requests/:id", middleware.Auth(jwtSecret), h.Cancel)
 	router.GET("/dashboard/requests", middleware.Auth(jwtSecret), h.ListMine)
 }
 
@@ -74,25 +75,38 @@ func (h *RequestsHandler) Create(c *gin.Context) {
 
 type updateRequestRequest struct {
 	CurrentOffer *int64  `json:"currentOffer"`
-	Region       *string `json:"region"`
+	Region       *string `json:"region" binding:"omitempty,min=1"`
+}
+
+// loadOwnedRequest loads a buyer request and verifies the authenticated
+// user owns it, writing the appropriate error response and returning
+// ok=false if not — same pattern as ListingsHandler.loadOwnedListing.
+func (h *RequestsHandler) loadOwnedRequest(c *gin.Context, userID, id string) (*models.BuyerRequest, bool) {
+	request, err := h.requests.GetByID(c.Request.Context(), id)
+	if errors.Is(err, repository.ErrNotFound) {
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "Заявка не найдена")
+		return nil, false
+	}
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить заявку")
+		return nil, false
+	}
+	if request.UserID != userID {
+		respondError(c, http.StatusForbidden, "FORBIDDEN", "Это не ваша заявка")
+		return nil, false
+	}
+	return request, true
 }
 
 // Update handles PATCH /api/requests/:id (owner only).
 func (h *RequestsHandler) Update(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
-	id := c.Param("id")
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	request, err := h.requests.GetByID(c.Request.Context(), id)
-	if errors.Is(err, repository.ErrNotFound) {
-		respondError(c, http.StatusNotFound, "NOT_FOUND", "Заявка не найдена")
-		return
-	}
-	if err != nil {
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить заявку")
-		return
-	}
-	if request.UserID != userID {
-		respondError(c, http.StatusForbidden, "FORBIDDEN", "Это не ваша заявка")
+	if _, ok := h.loadOwnedRequest(c, userID, id); !ok {
 		return
 	}
 
@@ -102,10 +116,17 @@ func (h *RequestsHandler) Update(c *gin.Context) {
 		return
 	}
 
-	fields := map[string]any{}
+	// Every buyer request is an Auto Exchange participant (there is no
+	// non-exchange buyer request, unlike listings' IsExchange flag) — its
+	// offer moves only via the daily +1% engine
+	// (ExchangeService.growBuyerOffers). A direct edit here would let the
+	// buyer bypass that mechanic entirely.
 	if req.CurrentOffer != nil {
-		fields["current_offer"] = *req.CurrentOffer
+		respondError(c, http.StatusConflict, "EXCHANGE_MANAGED_FIELD", "Предложение управляется автообменом и не может быть изменено вручную")
+		return
 	}
+
+	fields := map[string]any{}
 	if req.Region != nil {
 		fields["region"] = *req.Region
 	}
@@ -124,6 +145,28 @@ func (h *RequestsHandler) Update(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, toBuyerRequestResponse(*updated))
+}
+
+// Cancel handles DELETE /api/requests/:id (owner only) — a soft delete,
+// mirroring ListingsHandler.Archive: status becomes "archived", the row
+// is kept. Previously no way to remove a buyer request existed at all.
+func (h *RequestsHandler) Cancel(c *gin.Context) {
+	userID, _ := middleware.UserID(c)
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	if _, ok := h.loadOwnedRequest(c, userID, id); !ok {
+		return
+	}
+
+	if err := h.requests.SetStatus(c.Request.Context(), id, "archived"); err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось отменить заявку")
+		return
+	}
+
+	c.Status(http.StatusNoContent)
 }
 
 // ListMine handles GET /api/dashboard/requests — the authenticated user's

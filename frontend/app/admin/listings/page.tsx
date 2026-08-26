@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminListingsPage() {
-  return <AdminComingSoon title="Все объявления" />;
+  return <AdminComingSoon titleKey="admin.listings.title" />;
 }

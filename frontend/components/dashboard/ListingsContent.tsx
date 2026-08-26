@@ -7,9 +7,11 @@ import { ListingRow } from "@/components/dashboard/ListingRow";
 import { RowSkeleton } from "@/components/dashboard/RowSkeleton";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { listMyListings } from "@/lib/api/listings";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function ListingsContent() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["dashboard", "listings"],
     queryFn: () => listMyListings(token as string),
@@ -21,13 +23,13 @@ export function ListingsContent() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="text-[28px] font-semibold tracking-tight text-foreground sm:text-[32px]">
-            Мои объявления
+            {t("dashboard.nav.listings")}
           </h1>
           <p className="text-[15px] text-muted-foreground">
-            Объявления о продаже, которые вы разместили.
+            {t("dashboard.listings.subtitle")}
           </p>
         </div>
-        <Button href="/sell/new">Продать автомобиль</Button>
+        <Button href="/sell/new">{t("home.hero.sellCta")}</Button>
       </div>
 
       {isLoading ? (
@@ -38,8 +40,8 @@ export function ListingsContent() {
         </div>
       ) : isError ? (
         <EmptyState
-          title="Не удалось загрузить объявления"
-          description="Сервер временно недоступен. Попробуйте обновить страницу через минуту."
+          title={t("dashboard.listings.loadErrorTitle")}
+          description={t("cars.empty.error.description")}
         />
       ) : data && data.length > 0 ? (
         <div className="flex flex-col gap-4">
@@ -49,10 +51,10 @@ export function ListingsContent() {
         </div>
       ) : (
         <EmptyState
-          title="У вас пока нет объявлений о продаже."
-          description="Разместите автомобиль — Автобиржа сама подберёт покупателя по вашей цене."
+          title={t("dashboard.listings.emptyTitle")}
+          description={t("dashboard.listings.emptyDescription")}
           secondaryHref="/sell/new"
-          secondaryLabel="Продать автомобиль"
+          secondaryLabel={t("home.hero.sellCta")}
         />
       )}
     </div>

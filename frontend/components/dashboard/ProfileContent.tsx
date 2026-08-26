@@ -4,10 +4,12 @@ import { useRouter } from "next/navigation";
 import { LogOut, Mail, MapPin, Phone, User } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function ProfileContent() {
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
 
   // DashboardGuard only renders this once status === "authenticated", so
   // user is always set in practice — this is just to satisfy the type.
@@ -21,13 +23,13 @@ export function ProfileContent() {
     .toUpperCase();
 
   const fields = [
-    { icon: Phone, label: "Телефон", value: user.phone },
-    { icon: Mail, label: "Email", value: user.email ?? "Не указан" },
-    { icon: MapPin, label: "Регион", value: user.region ?? "Не указан" },
+    { icon: Phone, label: t("auth.phone"), value: user.phone },
+    { icon: Mail, label: t("dashboard.profile.email"), value: user.email ?? t("dashboard.profile.notSpecified") },
+    { icon: MapPin, label: t("quickSearch.region"), value: user.region ?? t("dashboard.profile.notSpecified") },
     {
       icon: User,
-      label: "Тип аккаунта",
-      value: user.accountType === "dealer" ? "Автосалон" : "Частное лицо",
+      label: t("dashboard.profile.accountType"),
+      value: user.accountType === "dealer" ? t("seller.dealer") : t("seller.private"),
     },
   ];
 
@@ -41,16 +43,16 @@ export function ProfileContent() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="text-[28px] font-semibold tracking-tight text-foreground sm:text-[32px]">
-            Профиль
+            {t("dashboard.profile.title")}
           </h1>
           <p className="text-[15px] text-muted-foreground">
-            Вы вошли как{" "}
+            {t("dashboard.profile.loggedInAs")}{" "}
             <span className="font-medium text-foreground">{user.name}</span>
           </p>
         </div>
         <Button variant="secondary" onClick={handleLogout}>
           <LogOut size={17} />
-          Выйти
+          {t("header.logout")}
         </Button>
       </div>
 
@@ -64,7 +66,7 @@ export function ProfileContent() {
               {user.name}
             </span>
             <span className="text-[14px] text-muted-foreground">
-              На сайте {user.since}
+              {t("dashboard.profile.onSiteSince")} {user.since}
             </span>
           </div>
         </div>

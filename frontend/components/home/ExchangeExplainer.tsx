@@ -1,43 +1,44 @@
+"use client";
+
 import { Banknote, GitMerge, Snowflake, TrendingUpDown } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { PriceConvergenceDiagram } from "@/components/exchange/PriceConvergenceDiagram";
-
-const steps = [
-  {
-    icon: TrendingUpDown,
-    title: "Цены сближаются",
-    description:
-      "Цена продавца снижается на 1% в сутки, цена покупателя растёт на 1% в сутки — навстречу друг другу.",
-  },
-  {
-    icon: GitMerge,
-    title: "Match и заморозка",
-    description:
-      "Когда разница в цене доходит примерно до 2%, система создаёт Match. Оба объявления замораживаются.",
-  },
-  {
-    icon: Banknote,
-    title: "Депозит 1%",
-    description:
-      "Продавец и покупатель вносят депозит в размере 1% от цены сделки — это подтверждает серьёзность намерений.",
-  },
-  {
-    icon: Snowflake,
-    title: "Контакты открыты",
-    description:
-      "После того как оба депозита внесены, стороны получают контакты друг друга и договариваются о сделке.",
-  },
-];
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function ExchangeExplainer() {
+  const { t } = useLanguage();
+
+  const steps = [
+    {
+      icon: TrendingUpDown,
+      title: t("home.exchange.step1.title"),
+      description: t("home.exchange.step1.description"),
+    },
+    {
+      icon: GitMerge,
+      title: t("home.exchange.step2.title"),
+      description: t("home.exchange.step2.description"),
+    },
+    {
+      icon: Banknote,
+      title: t("home.exchange.step3.title"),
+      description: t("home.exchange.step3.description"),
+    },
+    {
+      icon: Snowflake,
+      title: t("home.exchange.step4.title"),
+      description: t("home.exchange.step4.description"),
+    },
+  ];
+
   return (
     <section className="py-20 sm:py-28">
       <Container className="flex flex-col gap-12">
         <SectionHeader
-          eyebrow="Автобиржа"
-          title="Как работает Автобиржа"
-          description="Автоматический механизм, который сводит покупателя и продавца, когда их цены встречаются."
+          eyebrow={t("home.exchange.eyebrow")}
+          title={t("home.exchange.title")}
+          description={t("home.exchange.description")}
         />
 
         <PriceConvergenceDiagram />

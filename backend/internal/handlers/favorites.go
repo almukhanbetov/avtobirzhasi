@@ -46,7 +46,10 @@ func (h *FavoritesHandler) List(c *gin.Context) {
 // Add handles POST /api/favorites/:listingId.
 func (h *FavoritesHandler) Add(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
-	listingID := c.Param("listingId")
+	listingID, ok := requireUUIDParam(c, "listingId")
+	if !ok {
+		return
+	}
 
 	if _, err := h.listings.GetByID(c.Request.Context(), listingID); err != nil {
 		if errors.Is(err, repository.ErrNotFound) {
@@ -68,7 +71,10 @@ func (h *FavoritesHandler) Add(c *gin.Context) {
 // Remove handles DELETE /api/favorites/:listingId.
 func (h *FavoritesHandler) Remove(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
-	listingID := c.Param("listingId")
+	listingID, ok := requireUUIDParam(c, "listingId")
+	if !ok {
+		return
+	}
 
 	if err := h.favorites.Remove(c.Request.Context(), userID, listingID); err != nil {
 		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось удалить из избранного")

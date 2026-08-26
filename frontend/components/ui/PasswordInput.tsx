@@ -3,6 +3,7 @@
 import { forwardRef, useState, type InputHTMLAttributes } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export const PasswordInput = forwardRef<
   HTMLInputElement,
@@ -11,6 +12,7 @@ export const PasswordInput = forwardRef<
     error?: string;
   } & Omit<InputHTMLAttributes<HTMLInputElement>, "type">
 >(function PasswordInput({ label, error, className, ...props }, ref) {
+  const { t } = useLanguage();
   const [visible, setVisible] = useState(false);
 
   return (
@@ -33,7 +35,7 @@ export const PasswordInput = forwardRef<
         <button
           type="button"
           onClick={() => setVisible((value) => !value)}
-          aria-label={visible ? "Скрыть пароль" : "Показать пароль"}
+          aria-label={visible ? t("password.hide") : t("password.show")}
           className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground transition-colors hover:text-foreground"
         >
           {visible ? <EyeOff size={18} /> : <Eye size={18} />}

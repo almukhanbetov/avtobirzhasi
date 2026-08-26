@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { LoginForm } from "@/features/auth/LoginForm";
 import { RegisterForm } from "@/features/auth/RegisterForm";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { cn } from "@/lib/utils";
 
 type Mode = "login" | "register";
 
 export function AuthCard() {
+  const { t } = useLanguage();
   const [mode, setMode] = useState<Mode>("login");
 
   return (
@@ -23,7 +25,7 @@ export function AuthCard() {
               : "text-muted-foreground",
           )}
         >
-          Войти
+          {t("header.login")}
         </button>
         <button
           type="button"
@@ -35,14 +37,14 @@ export function AuthCard() {
               : "text-muted-foreground",
           )}
         >
-          Регистрация
+          {t("auth.registerTab")}
         </button>
       </div>
 
       {mode === "login" ? <LoginForm /> : <RegisterForm />}
 
       <p className="text-center text-[13px] text-muted-foreground">
-        Продолжая, вы соглашаетесь с условиями использования Автобиржи.
+        {t("auth.terms")}
       </p>
     </div>
   );

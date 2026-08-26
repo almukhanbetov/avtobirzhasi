@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import { GitMerge, MapPin, Search } from "lucide-react";
 import { Container } from "@/components/ui/Container";
@@ -5,8 +7,10 @@ import { SectionHeader } from "@/components/ui/SectionHeader";
 import { PriceMovement } from "@/components/exchange/PriceMovement";
 import { formatTenge } from "@/lib/format/money";
 import { mockCars } from "@/lib/mock/cars";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function ExchangeExample() {
+  const { t } = useLanguage();
   const sellerCar = mockCars.find((car) => car.id === "car-2")!;
   const buyerOffer = 11_400_000;
 
@@ -14,9 +18,9 @@ export function ExchangeExample() {
     <section className="py-20 sm:py-28">
       <Container className="flex flex-col gap-12">
         <SectionHeader
-          eyebrow="Пример"
-          title="Продавец и покупатель на пути к Match"
-          description="Так выглядит реальная пара: объявление продавца и заявка покупателя, цены которых движутся навстречу друг другу."
+          eyebrow={t("exchange.example.eyebrow")}
+          title={t("exchange.example.title")}
+          description={t("exchange.example.description")}
         />
 
         <div className="grid grid-cols-1 items-center gap-6 lg:grid-cols-[1fr_auto_1fr]">
@@ -32,7 +36,7 @@ export function ExchangeExample() {
             </div>
             <div className="flex flex-col gap-3 p-6">
               <span className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
-                Объявление продавца
+                {t("exchange.example.sellerListing")}
               </span>
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-[18px] font-semibold tracking-tight text-foreground">
@@ -59,10 +63,10 @@ export function ExchangeExample() {
             <div className="flex flex-col items-center gap-2 rounded-2xl bg-brand-light px-5 py-4 text-center">
               <GitMerge size={20} className="text-brand" />
               <span className="text-[13px] font-semibold text-brand-dark">
-                Разница ≈2%
+                {t("exchange.example.gapPercent")}
               </span>
               <span className="text-[12px] text-brand-dark/80">
-                до автоматического Match
+                {t("exchange.example.untilMatch")}
               </span>
             </div>
           </div>
@@ -73,7 +77,7 @@ export function ExchangeExample() {
             </div>
             <div className="flex flex-col gap-3 p-6">
               <span className="text-[13px] font-medium uppercase tracking-wide text-muted-foreground">
-                Заявка покупателя
+                {t("exchange.example.buyerRequest")}
               </span>
               <h3 className="text-[18px] font-semibold tracking-tight text-foreground">
                 {sellerCar.make} {sellerCar.model}, {sellerCar.year - 1}–
@@ -81,7 +85,7 @@ export function ExchangeExample() {
               </h3>
               <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
                 <MapPin size={14} />
-                {sellerCar.region} и соседние регионы
+                {sellerCar.region} {t("exchange.example.neighboringRegions")}
               </span>
               <div className="mt-1 flex items-center justify-between gap-3 border-t border-border pt-4">
                 <span className="text-xl font-semibold tracking-tight text-foreground">

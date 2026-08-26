@@ -13,9 +13,11 @@ import { createRequest } from "@/lib/api/requests";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { makes, regions, years } from "@/lib/mock/cars";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function RequestForm() {
   const router = useRouter();
+  const { t } = useLanguage();
   const { token } = useAuth();
   const queryClient = useQueryClient();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -37,7 +39,7 @@ export function RequestForm() {
       setApiError(
         err instanceof ApiError
           ? err.message
-          : "Не удалось создать заявку, попробуйте позже",
+          : t("requestForm.createError"),
       );
     }
   });
@@ -46,8 +48,8 @@ export function RequestForm() {
     <form onSubmit={onSubmit} className="flex w-full flex-col gap-5">
       {apiError ? <p className="text-[13px] text-destructive">{apiError}</p> : null}
 
-      <Select label="Марка" error={errors.make?.message} {...register("make")}>
-        <option value="">Выберите марку</option>
+      <Select label={t("quickSearch.make")} error={errors.make?.message} {...register("make")}>
+        <option value="">{t("listingForm.chooseMake")}</option>
         {makes.map((make) => (
           <option key={make} value={make}>
             {make}
@@ -56,7 +58,7 @@ export function RequestForm() {
       </Select>
 
       <Input
-        label="Модель"
+        label={t("quickSearch.model")}
         placeholder="Например: Camry"
         error={errors.model?.message}
         {...register("model")}
@@ -64,11 +66,11 @@ export function RequestForm() {
 
       <div className="grid grid-cols-2 gap-3">
         <Select
-          label="Год от"
+          label={t("requestForm.yearFrom")}
           error={errors.yearFrom?.message}
           {...register("yearFrom", { valueAsNumber: true })}
         >
-          <option value="">от</option>
+          <option value="">{t("filters.from")}</option>
           {years.map((year) => (
             <option key={year} value={year}>
               {year}
@@ -76,11 +78,11 @@ export function RequestForm() {
           ))}
         </Select>
         <Select
-          label="Год до"
+          label={t("requestForm.yearTo")}
           error={errors.yearTo?.message}
           {...register("yearTo", { valueAsNumber: true })}
         >
-          <option value="">до</option>
+          <option value="">{t("filters.to")}</option>
           {years.map((year) => (
             <option key={year} value={year}>
               {year}
@@ -89,8 +91,8 @@ export function RequestForm() {
         </Select>
       </div>
 
-      <Select label="Регион" error={errors.region?.message} {...register("region")}>
-        <option value="">Выберите регион</option>
+      <Select label={t("quickSearch.region")} error={errors.region?.message} {...register("region")}>
+        <option value="">{t("listingForm.chooseRegion")}</option>
         {regions.map((region) => (
           <option key={region} value={region}>
             {region}
@@ -99,7 +101,7 @@ export function RequestForm() {
       </Select>
 
       <Input
-        label="Стартовое предложение, ₸"
+        label={t("requestForm.initialOffer")}
         type="number"
         inputMode="numeric"
         placeholder="8 000 000"
@@ -108,12 +110,11 @@ export function RequestForm() {
       />
 
       <p className="text-[13px] text-muted-foreground">
-        Ваше предложение будет автоматически расти на 1% в день, пока не
-        найдётся подходящее объявление в пределах 2%.
+        {t("requestForm.growthNote")}
       </p>
 
       <Button type="submit" size="lg" disabled={isSubmitting} className="w-full">
-        {isSubmitting ? "Создаём заявку…" : "Создать заявку"}
+        {isSubmitting ? t("requestForm.creating") : t("dashboard.requests.createCta")}
       </Button>
     </form>
   );

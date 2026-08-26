@@ -15,17 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/AuthProvider";
-
-const navItems = [
-  { href: "/dashboard", label: "Обзор", icon: Gauge, exact: true },
-  { href: "/dashboard/listings", label: "Мои объявления", icon: LayoutGrid },
-  { href: "/dashboard/requests", label: "Заявки на покупку", icon: FileText },
-  { href: "/dashboard/matches", label: "Matches", icon: GitMerge },
-  { href: "/dashboard/deposits", label: "Депозиты", icon: Wallet },
-  { href: "/dashboard/favorites", label: "Избранное", icon: Heart },
-  { href: "/dashboard/notifications", label: "Уведомления", icon: Bell },
-  { href: "/dashboard/profile", label: "Профиль", icon: User },
-];
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 function isActive(pathname: string, href: string, exact?: boolean) {
   return exact ? pathname === href : pathname.startsWith(href);
@@ -35,6 +25,18 @@ export function DashboardNav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, logout } = useAuth();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { href: "/dashboard", label: t("dashboard.nav.overview"), icon: Gauge, exact: true },
+    { href: "/dashboard/listings", label: t("dashboard.nav.listings"), icon: LayoutGrid },
+    { href: "/dashboard/requests", label: t("dashboard.nav.requests"), icon: FileText },
+    { href: "/dashboard/matches", label: t("dashboard.nav.matches"), icon: GitMerge },
+    { href: "/dashboard/deposits", label: t("dashboard.nav.deposits"), icon: Wallet },
+    { href: "/dashboard/favorites", label: t("header.favorites"), icon: Heart },
+    { href: "/dashboard/notifications", label: t("dashboard.nav.notifications"), icon: Bell },
+    { href: "/dashboard/profile", label: t("dashboard.nav.profile"), icon: User },
+  ];
 
   // DashboardGuard only renders this once status === "authenticated", so
   // user is always set in practice — this is just to satisfy the type.
@@ -67,7 +69,7 @@ export function DashboardNav() {
               {user.name}
             </span>
             <span className="text-[12px] text-muted-foreground">
-              Открыть профиль
+              {t("dashboard.nav.openProfile")}
             </span>
           </div>
         </Link>
@@ -99,7 +101,7 @@ export function DashboardNav() {
           className="flex items-center gap-3 rounded-xl border-t border-border px-4 pt-4 text-[15px] font-medium text-muted-foreground transition-colors hover:text-foreground"
         >
           <LogOut size={18} />
-          Выйти
+          {t("header.logout")}
         </button>
       </div>
 
@@ -122,7 +124,7 @@ export function DashboardNav() {
             className="flex shrink-0 items-center gap-1.5 text-[13px] font-medium text-muted-foreground"
           >
             <LogOut size={15} />
-            Выйти
+            {t("header.logout")}
           </button>
         </div>
 

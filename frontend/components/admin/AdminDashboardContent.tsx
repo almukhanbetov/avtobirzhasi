@@ -5,6 +5,8 @@ import { FileText, GitMerge, LayoutGrid, Users, Wallet } from "lucide-react";
 import { SummaryCard } from "@/components/dashboard/SummaryCard";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { getAdminStats } from "@/lib/api/admin";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 function StatBreakdownCard({
   title,
@@ -32,9 +34,12 @@ function StatBreakdownCard({
 }
 
 export function AdminDashboardContent() {
+  const { t } = useLanguage();
+  const { token } = useAuth();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["admin", "stats"],
-    queryFn: getAdminStats,
+    queryFn: () => getAdminStats(token!),
+    enabled: !!token,
   });
 
   return (
@@ -44,7 +49,7 @@ export function AdminDashboardContent() {
           Dashboard
         </h1>
         <p className="text-[15px] text-muted-foreground">
-          Общая статистика по AVTOBIRZHASI.KZ.
+          {t("admin.stats.subtitle")}
         </p>
       </div>
 
@@ -56,54 +61,53 @@ export function AdminDashboardContent() {
         </div>
       ) : isError || !data ? (
         <p className="rounded-2xl border border-border bg-surface p-5 text-[15px] text-muted-foreground">
-          Не удалось загрузить статистику. Попробуйте обновить страницу через
-          минуту.
+          {t("admin.stats.loadError")}
         </p>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <SummaryCard icon={Users} label="Пользователи" value={data.users} />
+            <SummaryCard icon={Users} label={t("admin.stats.users")} value={data.users} />
             <SummaryCard
               icon={LayoutGrid}
-              label="Объявления"
+              label={t("admin.stats.listings")}
               value={data.listings.total}
             />
             <SummaryCard
               icon={FileText}
-              label="Заявки на покупку"
+              label={t("dashboard.nav.requests")}
               value={data.buyerRequests.total}
             />
-            <SummaryCard icon={GitMerge} label="Matches" value={data.matches.total} />
-            <SummaryCard icon={Wallet} label="Депозиты" value={data.deposits.total} />
+            <SummaryCard icon={GitMerge} label={t("dashboard.nav.matches")} value={data.matches.total} />
+            <SummaryCard icon={Wallet} label={t("dashboard.nav.deposits")} value={data.deposits.total} />
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
             <StatBreakdownCard
-              title="Объявления"
+              title={t("admin.stats.listings")}
               rows={[
-                { label: "Активные", value: data.listings.active },
-                { label: "На модерации", value: data.listings.moderation },
-                { label: "Заморожены (в сделке)", value: data.listings.frozen },
-                { label: "В архиве", value: data.listings.archived },
-                { label: "Участвуют в Автобирже", value: data.listings.exchange },
+                { label: t("admin.stats.listings.active"), value: data.listings.active },
+                { label: t("admin.stats.listings.moderation"), value: data.listings.moderation },
+                { label: t("admin.stats.listings.frozen"), value: data.listings.frozen },
+                { label: t("admin.stats.listings.archived"), value: data.listings.archived },
+                { label: t("admin.stats.listings.exchange"), value: data.listings.exchange },
               ]}
             />
             <StatBreakdownCard
-              title="Matches"
+              title={t("dashboard.nav.matches")}
               rows={[
-                { label: "Ожидают депозит", value: data.matches.awaitingDeposit },
-                { label: "Один депозит внесён", value: data.matches.partiallyPaid },
-                { label: "Подтверждены", value: data.matches.confirmed },
-                { label: "Истёк срок", value: data.matches.expired },
-                { label: "Отменены", value: data.matches.cancelled },
+                { label: t("admin.stats.matches.awaitingDeposit"), value: data.matches.awaitingDeposit },
+                { label: t("admin.stats.matches.partiallyPaid"), value: data.matches.partiallyPaid },
+                { label: t("admin.stats.matches.confirmed"), value: data.matches.confirmed },
+                { label: t("admin.stats.matches.expired"), value: data.matches.expired },
+                { label: t("admin.stats.matches.cancelled"), value: data.matches.cancelled },
               ]}
             />
             <StatBreakdownCard
-              title="Депозиты"
+              title={t("dashboard.nav.deposits")}
               rows={[
-                { label: "Ожидают оплаты", value: data.deposits.pending },
-                { label: "Оплачены", value: data.deposits.paid },
-                { label: "Возвращены", value: data.deposits.refunded },
+                { label: t("admin.stats.deposits.pending"), value: data.deposits.pending },
+                { label: t("admin.stats.deposits.paid"), value: data.deposits.paid },
+                { label: t("admin.stats.deposits.refunded"), value: data.deposits.refunded },
               ]}
             />
           </div>

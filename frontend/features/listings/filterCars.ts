@@ -2,11 +2,11 @@ import { getParam, type RawSearchParams } from "@/lib/url/searchParams";
 
 export type SortOption = "newest" | "price-asc" | "price-desc" | "year-desc";
 
-export const sortOptions: { value: SortOption; label: string }[] = [
-  { value: "newest", label: "Сначала новые" },
-  { value: "price-asc", label: "Цена по возрастанию" },
-  { value: "price-desc", label: "Цена по убыванию" },
-  { value: "year-desc", label: "Год новее" },
+export const sortOptionValues: SortOption[] = [
+  "newest",
+  "price-asc",
+  "price-desc",
+  "year-desc",
 ];
 
 export interface CarFilters {
@@ -33,7 +33,7 @@ function toNumberOrNull(value: string): number | null {
 
 export function parseCarFilters(searchParams: RawSearchParams): CarFilters {
   const sortParam = getParam(searchParams, "sort");
-  const sort = sortOptions.some((option) => option.value === sortParam)
+  const sort = sortOptionValues.includes(sortParam as SortOption)
     ? (sortParam as SortOption)
     : "newest";
   const page = Number(getParam(searchParams, "page"));

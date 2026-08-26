@@ -27,12 +27,13 @@ type DepositRow struct {
 	Role       string
 	Amount     int64
 	Status     string
+	Provider   string
 	CreatedAt  time.Time
 	PaidAt     *time.Time
 	RefundedAt *time.Time
 }
 
-const depositColumns = `id, match_id, user_id, role, amount, status, created_at, paid_at, refunded_at`
+const depositColumns = `id, match_id, user_id, role, amount, status, provider, created_at, paid_at, refunded_at`
 
 // ListForUser returns every deposit ever owed by a user (any status), most
 // recently created first.
@@ -52,7 +53,7 @@ func (r *DepositRepository) ListForUser(ctx context.Context, userID string) ([]D
 	for rows.Next() {
 		var d DepositRow
 		if err := rows.Scan(
-			&d.ID, &d.MatchID, &d.UserID, &d.Role, &d.Amount, &d.Status,
+			&d.ID, &d.MatchID, &d.UserID, &d.Role, &d.Amount, &d.Status, &d.Provider,
 			&d.CreatedAt, &d.PaidAt, &d.RefundedAt,
 		); err != nil {
 			return nil, err

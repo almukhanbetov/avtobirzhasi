@@ -9,11 +9,11 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ModerationHandler exposes internal, non-public endpoints backing the
-// simple admin moderation queue (app/admin/moderation on the frontend).
-// Like JobsHandler's daily-tick trigger, these have no user-facing auth of
-// their own — LocalOnly() is the entire security boundary, appropriate for
-// a same-machine admin tool, not a real multi-operator admin system.
+// ModerationHandler exposes internal endpoints backing the admin
+// moderation queue (app/admin/moderation on the frontend). Mounted behind
+// middleware.LocalOnly() + middleware.Auth() + middleware.AdminOnly() — a
+// caller must be on the loopback interface AND hold a valid JWT for a
+// users.role='admin' account, not just one or the other.
 type ModerationHandler struct {
 	listings *repository.ListingRepository
 	users    *repository.UserRepository
@@ -25,7 +25,8 @@ func NewModerationHandler(listings *repository.ListingRepository, users *reposit
 }
 
 // RegisterModerationRoutes wires the internal routes. Callers must mount
-// this under a router group protected by middleware.LocalOnly().
+// this under a router group protected by middleware.LocalOnly(),
+// middleware.Auth() and middleware.AdminOnly().
 func RegisterModerationRoutes(router *gin.RouterGroup, h *ModerationHandler) {
 	router.GET("/listings/pending", h.ListPending)
 	router.POST("/listings/:id/approve", h.Approve)
@@ -88,7 +89,10 @@ func (h *ModerationHandler) loadPendingListing(c *gin.Context, id string) (ok bo
 // public catalog (and, if it's an Auto Exchange listing, starts
 // participating in the daily price-decay/matching pass).
 func (h *ModerationHandler) Approve(c *gin.Context) {
-	id := c.Param("id")
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	if !h.loadPendingListing(c, id) {
 		return
 	}
@@ -106,7 +110,10 @@ func (h *ModerationHandler) Approve(c *gin.Context) {
 // state a seller's own DELETE /api/listings/:id produces). It never goes
 // through "active", so a rejected listing is never publicly visible.
 func (h *ModerationHandler) Reject(c *gin.Context) {
-	id := c.Param("id")
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 	if !h.loadPendingListing(c, id) {
 		return
 	}

@@ -6,9 +6,11 @@ import { MatchCard } from "@/components/dashboard/MatchCard";
 import { RowSkeleton } from "@/components/dashboard/RowSkeleton";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { listMyMatches } from "@/lib/api/matches";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function MatchesContent() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["dashboard", "matches"],
     queryFn: () => listMyMatches(token as string),
@@ -19,11 +21,10 @@ export function MatchesContent() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-[28px] font-semibold tracking-tight text-foreground sm:text-[32px]">
-          Matches
+          {t("dashboard.nav.matches")}
         </h1>
         <p className="text-[15px] text-muted-foreground">
-          Совпадения между вашими объявлениями и заявками других
-          пользователей.
+          {t("dashboard.matches.subtitle")}
         </p>
       </div>
 
@@ -34,8 +35,8 @@ export function MatchesContent() {
         </div>
       ) : isError ? (
         <EmptyState
-          title="Не удалось загрузить Match"
-          description="Сервер временно недоступен. Попробуйте обновить страницу через минуту."
+          title={t("dashboard.matches.loadErrorTitle")}
+          description={t("cars.empty.error.description")}
         />
       ) : data && data.length > 0 ? (
         <div className="flex flex-col gap-4">
@@ -45,8 +46,8 @@ export function MatchesContent() {
         </div>
       ) : (
         <EmptyState
-          title="Пока нет активных Match."
-          description="Как только цена продавца и покупателя сойдутся примерно до 2%, здесь появится совпадение."
+          title={t("dashboard.matches.emptyTitle")}
+          description={t("dashboard.matches.emptyDescription")}
         />
       )}
     </div>

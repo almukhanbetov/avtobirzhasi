@@ -1,5 +1,9 @@
+"use client";
+
 import { Check, GitMerge, Lock, Unlock, Wallet, type LucideIcon } from "lucide-react";
 import { notificationLabels } from "@/lib/labels/dashboard";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { formatDateTime } from "@/lib/format/date";
 import { cn } from "@/lib/utils";
 import type { Notification, NotificationType } from "@/types/dashboard";
 
@@ -11,13 +15,6 @@ const iconByType: Record<NotificationType, LucideIcon> = {
   match_expired: Lock,
 };
 
-const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
-  day: "numeric",
-  month: "long",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
 export function NotificationItem({
   notification,
   onMarkRead,
@@ -25,6 +22,7 @@ export function NotificationItem({
   notification: Notification;
   onMarkRead?: () => void;
 }) {
+  const { lang, t } = useLanguage();
   const Icon = iconByType[notification.type];
   const className = cn(
     "flex w-full items-start gap-3 rounded-2xl border border-border p-4 text-left sm:p-5",
@@ -39,12 +37,12 @@ export function NotificationItem({
       <div className="flex flex-1 flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <span className="text-[14px] font-semibold text-foreground">
-            {notificationLabels[notification.type]}
+            {notificationLabels[lang][notification.type]}
           </span>
           {!notification.read ? (
             <span
               className="h-2 w-2 shrink-0 rounded-full bg-brand"
-              aria-label="Непрочитано"
+              aria-label={t("notification.unread")}
             />
           ) : null}
         </div>
@@ -52,7 +50,7 @@ export function NotificationItem({
           {notification.message}
         </p>
         <span className="text-[12px] text-muted-foreground">
-          {dateFormatter.format(new Date(notification.date))}
+          {formatDateTime(notification.date, lang)}
         </span>
       </div>
     </>

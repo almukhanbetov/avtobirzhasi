@@ -15,19 +15,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const navItems = [
-  { href: "/admin", label: "Dashboard", icon: Gauge, exact: true },
-  { href: "/admin/moderation", label: "Модерация объявлений", icon: ClipboardCheck },
-  { href: "/admin/listings", label: "Все объявления", icon: LayoutGrid },
-  { href: "/admin/users", label: "Пользователи", icon: Users },
-  { href: "/admin/requests", label: "Заявки на покупку", icon: FileText },
-  { href: "/admin/matches", label: "Matches", icon: GitMerge },
-  { href: "/admin/deposits", label: "Депозиты", icon: Wallet },
-  { href: "/admin/notifications", label: "Уведомления", icon: Bell },
-  { href: "/admin/reviews", label: "Отзывы", icon: Star },
-  { href: "/admin/settings", label: "Настройки", icon: Settings },
-];
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 function isActive(pathname: string, href: string, exact?: boolean) {
   return exact ? pathname === href : pathname.startsWith(href);
@@ -35,13 +23,27 @@ function isActive(pathname: string, href: string, exact?: boolean) {
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { t } = useLanguage();
+
+  const navItems = [
+    { href: "/admin", label: "Dashboard", icon: Gauge, exact: true },
+    { href: "/admin/moderation", label: t("admin.moderation.title"), icon: ClipboardCheck },
+    { href: "/admin/listings", label: t("admin.listings.title"), icon: LayoutGrid },
+    { href: "/admin/users", label: t("admin.users.title"), icon: Users },
+    { href: "/admin/requests", label: t("dashboard.nav.requests"), icon: FileText },
+    { href: "/admin/matches", label: t("dashboard.nav.matches"), icon: GitMerge },
+    { href: "/admin/deposits", label: t("dashboard.nav.deposits"), icon: Wallet },
+    { href: "/admin/notifications", label: t("dashboard.nav.notifications"), icon: Bell },
+    { href: "/admin/reviews", label: t("admin.reviews.title"), icon: Star },
+    { href: "/admin/settings", label: t("admin.settings.title"), icon: Settings },
+  ];
 
   return (
     <>
       <div className="hidden w-64 shrink-0 flex-col gap-4 lg:flex">
         <div className="flex flex-col px-4 py-3">
           <span className="text-[14px] font-semibold text-foreground">
-            Админка
+            {t("admin.sidebar.title")}
           </span>
           <span className="text-[12px] text-muted-foreground">
             AVTOBIRZHASI.KZ
@@ -73,7 +75,7 @@ export function AdminSidebar() {
       <div className="flex flex-col gap-3 lg:hidden">
         <div className="rounded-xl border border-border bg-surface px-4 py-3">
           <span className="text-[14px] font-semibold text-foreground">
-            Админка
+            {t("admin.sidebar.title")}
           </span>
         </div>
 

@@ -48,7 +48,10 @@ func (h *NotificationsHandler) List(c *gin.Context) {
 // MarkRead handles PATCH /api/notifications/:id/read (owner only).
 func (h *NotificationsHandler) MarkRead(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
-	id := c.Param("id")
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	n, err := h.notifications.GetByID(c.Request.Context(), id)
 	if errors.Is(err, repository.ErrNotFound) {

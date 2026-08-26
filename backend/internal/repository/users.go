@@ -23,15 +23,17 @@ func NewUserRepository(r *Repository) *UserRepository {
 }
 
 // Create inserts a new user. u.Name, u.Phone and u.PasswordHash must be set;
-// the generated id and defaulted columns are scanned back into u.
+// the generated id and defaulted columns are scanned back into u. Role is
+// never taken from the caller here — it always comes back as the column's
+// 'user' default, so nothing can register itself as an admin.
 func (r *UserRepository) Create(ctx context.Context, u *models.User) error {
 	const query = `
 		INSERT INTO users (name, phone, password_hash)
 		VALUES ($1, $2, $3)
-		RETURNING id, account_type, rating, reviews_count, created_at, updated_at
+		RETURNING id, account_type, role, rating, reviews_count, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query, u.Name, u.Phone, u.PasswordHash).Scan(
-		&u.ID, &u.AccountType, &u.Rating, &u.ReviewsCount, &u.CreatedAt, &u.UpdatedAt,
+		&u.ID, &u.AccountType, &u.Role, &u.Rating, &u.ReviewsCount, &u.CreatedAt, &u.UpdatedAt,
 	)
 }
 
@@ -39,7 +41,7 @@ func (r *UserRepository) Create(ctx context.Context, u *models.User) error {
 // number. Returns ErrNotFound if no such user exists.
 func (r *UserRepository) FindByPhone(ctx context.Context, phone string) (*models.User, error) {
 	const query = `
-		SELECT id, name, phone, password_hash, email, region, account_type, rating, reviews_count, created_at, updated_at
+		SELECT id, name, phone, password_hash, email, region, account_type, role, rating, reviews_count, created_at, updated_at
 		FROM users WHERE phone = $1
 	`
 	return r.scanUser(r.db.QueryRow(ctx, query, phone))
@@ -48,7 +50,7 @@ func (r *UserRepository) FindByPhone(ctx context.Context, phone string) (*models
 // FindByID looks up a user by id. Returns ErrNotFound if no such user exists.
 func (r *UserRepository) FindByID(ctx context.Context, id string) (*models.User, error) {
 	const query = `
-		SELECT id, name, phone, password_hash, email, region, account_type, rating, reviews_count, created_at, updated_at
+		SELECT id, name, phone, password_hash, email, region, account_type, role, rating, reviews_count, created_at, updated_at
 		FROM users WHERE id = $1
 	`
 	return r.scanUser(r.db.QueryRow(ctx, query, id))
@@ -58,7 +60,7 @@ func (r *UserRepository) scanUser(row pgx.Row) (*models.User, error) {
 	var u models.User
 	err := row.Scan(
 		&u.ID, &u.Name, &u.Phone, &u.PasswordHash, &u.Email, &u.Region,
-		&u.AccountType, &u.Rating, &u.ReviewsCount, &u.CreatedAt, &u.UpdatedAt,
+		&u.AccountType, &u.Role, &u.Rating, &u.ReviewsCount, &u.CreatedAt, &u.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound

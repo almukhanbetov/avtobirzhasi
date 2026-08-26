@@ -130,7 +130,9 @@ type candidatePair struct {
 // pair — same region/make/model, listing's year within the request's
 // range, price gap within tolerance — and tries to create a Match for
 // each. See auto-exchange-match skill: "compare Region, Make, Model,
-// Year, Price".
+// Year, Price". A listing never matches a buyer_request owned by the same
+// user (l.user_id <> br.user_id) — otherwise a seller with a matching
+// buyer request of their own would trade with themselves.
 func (s *ExchangeService) createMatches(ctx context.Context) (int, error) {
 	rows, err := s.db.Query(ctx, `
 		SELECT l.id, br.id
@@ -139,6 +141,7 @@ func (s *ExchangeService) createMatches(ctx context.Context) (int, error) {
 			br.status = 'active' AND
 			l.status = 'active' AND
 			l.is_exchange = true AND
+			l.user_id <> br.user_id AND
 			l.region = br.region AND
 			l.make = br.make AND
 			l.model = br.model AND
@@ -208,6 +211,12 @@ func (s *ExchangeService) tryCreateMatch(ctx context.Context, pair candidatePair
 	}
 
 	if listingStatus != "active" || requestStatus != "active" {
+		return false, nil
+	}
+	if listingUserID == requestUserID {
+		// Re-checked here too (not just excluded in createMatches' SQL) for
+		// the same reason the status re-check above exists: this is the
+		// authoritative, locked point right before a Match is created.
 		return false, nil
 	}
 

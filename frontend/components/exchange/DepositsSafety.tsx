@@ -1,16 +1,21 @@
+"use client";
+
 import { Lock, ShieldCheck } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { MatchLifecycle } from "@/components/exchange/MatchLifecycle";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function DepositsSafety() {
+  const { t } = useLanguage();
+
   return (
     <section className="bg-surface py-20 sm:py-28">
       <Container className="flex flex-col gap-12">
         <SectionHeader
-          eyebrow="Депозит и безопасность"
-          title="Контакты открываются только двум подтверждённым сторонам"
-          description="Депозит 1% — это не оплата автомобиля, а подтверждение серьёзности намерений. Пока не внесены оба депозита, объявления заморожены, а контакты скрыты."
+          eyebrow={t("exchange.depositsSafety.eyebrow")}
+          title={t("exchange.depositsSafety.title")}
+          description={t("exchange.depositsSafety.description")}
         />
 
         <MatchLifecycle />
@@ -21,9 +26,7 @@ export function DepositsSafety() {
               <Lock size={20} />
             </span>
             <p className="text-[15px] leading-relaxed text-muted-foreground">
-              До внесения обоих депозитов номера телефонов скрыты — это
-              защищает продавца от случайных звонков, а покупателя — от
-              продавцов, которые передумали в последний момент.
+              {t("exchange.depositsSafety.note1")}
             </p>
           </div>
           <div className="flex items-start gap-4 rounded-2xl border border-border bg-background p-6">
@@ -31,9 +34,7 @@ export function DepositsSafety() {
               <ShieldCheck size={20} />
             </span>
             <p className="text-[15px] leading-relaxed text-muted-foreground">
-              Депозит — это подтверждение намерений, а не оплата автомобиля.
-              Если сделка не состоится по вине другой стороны, депозит
-              возвращается в полном размере.
+              {t("exchange.depositsSafety.note2")}
             </p>
           </div>
         </div>

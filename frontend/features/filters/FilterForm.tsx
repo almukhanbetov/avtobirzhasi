@@ -12,6 +12,7 @@ import {
   fuelTypeLabels,
   transmissionLabels,
 } from "@/lib/labels/car";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import type { CarFilters } from "@/features/listings/filterCars";
 
 const DEBOUNCE_MS = 400;
@@ -23,6 +24,7 @@ export function FilterForm({
   values: CarFilters;
   className?: string;
 }) {
+  const { lang, t } = useLanguage();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -77,11 +79,11 @@ export function FilterForm({
     <div className={className}>
       <div className="flex flex-col gap-5">
         <Select
-          label="Регион"
+          label={t("quickSearch.region")}
           value={values.region}
           onChange={(e) => applyParam("region", e.target.value)}
         >
-          <option value="">Любой регион</option>
+          <option value="">{t("quickSearch.anyRegion")}</option>
           {regions.map((region) => (
             <option key={region} value={region}>
               {region}
@@ -90,11 +92,11 @@ export function FilterForm({
         </Select>
 
         <Select
-          label="Марка"
+          label={t("quickSearch.make")}
           value={values.make}
           onChange={(e) => applyParam("make", e.target.value)}
         >
-          <option value="">Любая марка</option>
+          <option value="">{t("quickSearch.anyMake")}</option>
           {makes.map((make) => (
             <option key={make} value={make}>
               {make}
@@ -103,7 +105,7 @@ export function FilterForm({
         </Select>
 
         <Input
-          label="Модель"
+          label={t("quickSearch.model")}
           placeholder="Например: Camry"
           value={model}
           onChange={(e) => {
@@ -114,15 +116,15 @@ export function FilterForm({
 
         <div className="flex flex-col gap-2">
           <span className="text-[13px] font-medium text-muted-foreground">
-            Год выпуска
+            {t("listingForm.year")}
           </span>
           <div className="grid grid-cols-2 gap-3">
             <Select
-              label="от"
+              label={t("filters.from")}
               value={values.yearFrom ?? ""}
               onChange={(e) => applyParam("yearFrom", e.target.value)}
             >
-              <option value="">от</option>
+              <option value="">{t("filters.from")}</option>
               {years.map((year) => (
                 <option key={year} value={year}>
                   {year}
@@ -130,11 +132,11 @@ export function FilterForm({
               ))}
             </Select>
             <Select
-              label="до"
+              label={t("filters.to")}
               value={values.yearTo ?? ""}
               onChange={(e) => applyParam("yearTo", e.target.value)}
             >
-              <option value="">до</option>
+              <option value="">{t("filters.to")}</option>
               {years.map((year) => (
                 <option key={year} value={year}>
                   {year}
@@ -146,11 +148,11 @@ export function FilterForm({
 
         <div className="flex flex-col gap-2">
           <span className="text-[13px] font-medium text-muted-foreground">
-            Цена, ₸
+            {t("listingForm.price")}
           </span>
           <div className="grid grid-cols-2 gap-3">
             <Input
-              label="от"
+              label={t("filters.from")}
               type="number"
               inputMode="numeric"
               placeholder="0"
@@ -161,7 +163,7 @@ export function FilterForm({
               }}
             />
             <Input
-              label="до"
+              label={t("filters.to")}
               type="number"
               inputMode="numeric"
               placeholder="50 000 000"
@@ -182,7 +184,7 @@ export function FilterForm({
         >
           <summary className="cursor-pointer list-none text-[15px] font-medium text-foreground marker:content-none">
             <span className="inline-flex items-center gap-1.5">
-              Ещё фильтры
+              {t("filters.more")}
               <span className="text-muted-foreground transition-transform group-open:rotate-180">
                 ⌄
               </span>
@@ -191,12 +193,12 @@ export function FilterForm({
 
           <div className="mt-5 flex flex-col gap-5">
             <Select
-              label="Кузов"
+              label={t("specs.bodyType")}
               value={values.bodyType}
               onChange={(e) => applyParam("bodyType", e.target.value)}
             >
-              <option value="">Любой кузов</option>
-              {Object.entries(bodyTypeLabels).map(([value, label]) => (
+              <option value="">{t("filters.anyBodyType")}</option>
+              {Object.entries(bodyTypeLabels[lang]).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -204,12 +206,12 @@ export function FilterForm({
             </Select>
 
             <Select
-              label="Коробка"
+              label={t("specs.transmission")}
               value={values.transmission}
               onChange={(e) => applyParam("transmission", e.target.value)}
             >
-              <option value="">Любая коробка</option>
-              {Object.entries(transmissionLabels).map(([value, label]) => (
+              <option value="">{t("filters.anyTransmission")}</option>
+              {Object.entries(transmissionLabels[lang]).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -217,12 +219,12 @@ export function FilterForm({
             </Select>
 
             <Select
-              label="Привод"
+              label={t("specs.drivetrain")}
               value={values.drivetrain}
               onChange={(e) => applyParam("drivetrain", e.target.value)}
             >
-              <option value="">Любой привод</option>
-              {Object.entries(drivetrainLabels).map(([value, label]) => (
+              <option value="">{t("filters.anyDrivetrain")}</option>
+              {Object.entries(drivetrainLabels[lang]).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -230,12 +232,12 @@ export function FilterForm({
             </Select>
 
             <Select
-              label="Тип топлива"
+              label={t("listingForm.fuelType")}
               value={values.fuelType}
               onChange={(e) => applyParam("fuelType", e.target.value)}
             >
-              <option value="">Любое топливо</option>
-              {Object.entries(fuelTypeLabels).map(([value, label]) => (
+              <option value="">{t("filters.anyFuelType")}</option>
+              {Object.entries(fuelTypeLabels[lang]).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -249,7 +251,7 @@ export function FilterForm({
             href="/cars"
             className="block text-center text-[15px] font-medium text-muted-foreground hover:text-foreground"
           >
-            Сбросить фильтры
+            {t("emptyState.resetFilters")}
           </Link>
         </div>
       </div>

@@ -4,18 +4,20 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { CarGrid } from "@/components/cars/CarGrid";
 import { CarCardSkeleton } from "@/components/cars/CarCardSkeleton";
 import { useFavorites } from "@/lib/favorites/useFavorites";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function FavoritesContent() {
   const { favorites, isLoading, isError } = useFavorites();
+  const { t } = useLanguage();
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-[28px] font-semibold tracking-tight text-foreground sm:text-[32px]">
-          Избранное
+          {t("header.favorites")}
         </h1>
         <p className="text-[15px] text-muted-foreground">
-          Автомобили, которые вы сохранили для сравнения.
+          {t("dashboard.favorites.subtitle")}
         </p>
       </div>
 
@@ -28,17 +30,17 @@ export function FavoritesContent() {
         </div>
       ) : isError ? (
         <EmptyState
-          title="Не удалось загрузить избранное"
-          description="Сервер временно недоступен. Попробуйте обновить страницу через минуту."
+          title={t("dashboard.favorites.loadErrorTitle")}
+          description={t("cars.empty.error.description")}
         />
       ) : favorites.length > 0 ? (
         <CarGrid cars={favorites} />
       ) : (
         <EmptyState
-          title="В избранном пока пусто."
-          description="Нажимайте на сердечко на карточке автомобиля, чтобы сохранить его здесь."
+          title={t("dashboard.favorites.emptyTitle")}
+          description={t("dashboard.favorites.emptyDescription")}
           secondaryHref="/cars"
-          secondaryLabel="Смотреть автомобили"
+          secondaryLabel={t("home.buyingWays.way1.cta")}
         />
       )}
     </div>

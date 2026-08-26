@@ -39,7 +39,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ru" className={`${geistSans.variable} h-full antialiased`}>
+    <html
+      lang="ru"
+      className={`${geistSans.variable} h-full antialiased`}
+      // The beforeInteractive script below adds "dark" to this element's
+      // classList before React hydrates, so a user who already picked dark
+      // doesn't see a light-theme flash. That's a deliberate, expected
+      // mismatch between the server-rendered class and the DOM at
+      // hydration time — suppress the warning for it specifically, rather
+      // than silencing hydration warnings anywhere else.
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col bg-background font-sans text-foreground">
         <Script id="theme-init" strategy="beforeInteractive">
           {THEME_INIT_SCRIPT}

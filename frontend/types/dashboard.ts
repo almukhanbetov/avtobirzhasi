@@ -56,6 +56,11 @@ export interface Deposit {
   car: Car;
   amount: number;
   status: DepositStatus;
+  // Always "mock" today — no real payment gateway exists yet. Kept as a
+  // plain string (not an enum) since the backend is the source of truth
+  // for what providers exist; the frontend just displays whatever it says
+  // rather than assuming a closed set.
+  provider: string;
   date: string;
 }
 

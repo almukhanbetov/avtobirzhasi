@@ -1,14 +1,20 @@
+"use client";
+
 import { Banknote, ChevronRight, GitMerge, Unlock } from "lucide-react";
 import { Badge } from "@/components/ui/Badge";
-
-const stages = [
-  { icon: GitMerge, label: "Match создан" },
-  { icon: Banknote, label: "Депозит продавца внесён" },
-  { icon: Banknote, label: "Депозит покупателя внесён" },
-  { icon: Unlock, label: "Контакты открыты" },
-];
+import { matchStatusLabels } from "@/lib/labels/dashboard";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function MatchLifecycle() {
+  const { lang, t } = useLanguage();
+
+  const stages = [
+    { icon: GitMerge, label: t("exchange.lifecycle.stage1") },
+    { icon: Banknote, label: t("exchange.lifecycle.stage2") },
+    { icon: Banknote, label: t("exchange.lifecycle.stage3") },
+    { icon: Unlock, label: t("exchange.lifecycle.stage4") },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-2">
@@ -34,14 +40,12 @@ export function MatchLifecycle() {
 
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-3 text-[13px] text-muted-foreground">
-          <Badge variant="warning">Истёк срок</Badge>
-          Если депозиты не внесены вовремя, объявления снова становятся
-          активными.
+          <Badge variant="warning">{matchStatusLabels[lang].expired}</Badge>
+          {t("exchange.lifecycle.expiredNote")}
         </div>
         <div className="flex flex-1 items-center gap-2.5 rounded-xl border border-border bg-surface px-4 py-3 text-[13px] text-muted-foreground">
-          <Badge variant="neutral">Отменено</Badge>
-          Если одна из сторон отменяет сделку, внесённый депозит
-          возвращается.
+          <Badge variant="neutral">{matchStatusLabels[lang].cancelled}</Badge>
+          {t("exchange.lifecycle.cancelledNote")}
         </div>
       </div>
     </div>

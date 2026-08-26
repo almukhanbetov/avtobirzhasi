@@ -1,9 +1,13 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatTenge } from "@/lib/format/money";
+import { formatDateTime } from "@/lib/format/date";
 import { matchStatusLabels } from "@/lib/labels/dashboard";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import type { MatchDeal, MatchStatus } from "@/types/dashboard";
 
 const statusVariant: Record<
@@ -18,14 +22,8 @@ const statusVariant: Record<
   cancelled: "neutral",
 };
 
-const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
-  day: "numeric",
-  month: "long",
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
 export function MatchCard({ match }: { match: MatchDeal }) {
+  const { lang, t } = useLanguage();
   const needsMyDeposit =
     (match.role === "seller" && !match.sellerDepositPaid) ||
     (match.role === "buyer" && !match.buyerDepositPaid);
@@ -49,14 +47,14 @@ export function MatchCard({ match }: { match: MatchDeal }) {
             {match.car.make} {match.car.model} {match.car.year}
           </span>
           <Badge variant={statusVariant[match.status]}>
-            {matchStatusLabels[match.status]}
+            {matchStatusLabels[lang][match.status]}
           </Badge>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
           <div className="flex flex-col">
             <span className="text-[12px] text-muted-foreground">
-              Финальная цена
+              {t("match.finalPrice")}
             </span>
             <span className="text-[15px] font-semibold text-foreground">
               {formatTenge(match.finalPrice)}
@@ -64,7 +62,7 @@ export function MatchCard({ match }: { match: MatchDeal }) {
           </div>
           <div className="flex flex-col">
             <span className="text-[12px] text-muted-foreground">
-              Ваш депозит
+              {t("match.yourDeposit")}
             </span>
             <span className="text-[15px] font-semibold text-foreground">
               {formatTenge(match.depositAmount)}
@@ -73,10 +71,10 @@ export function MatchCard({ match }: { match: MatchDeal }) {
           {isOpen ? (
             <div className="flex flex-col">
               <span className="text-[12px] text-muted-foreground">
-                Дедлайн
+                {t("match.deadline")}
               </span>
               <span className="text-[15px] font-semibold text-foreground">
-                {dateFormatter.format(new Date(match.deadline))}
+                {formatDateTime(match.deadline, lang)}
               </span>
             </div>
           ) : null}
@@ -84,33 +82,33 @@ export function MatchCard({ match }: { match: MatchDeal }) {
 
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
           <span className={match.sellerDepositPaid ? "text-success" : ""}>
-            Депозит продавца:{" "}
-            {match.sellerDepositPaid ? "внесён" : "ожидается"}
+            {t("match.sellerDeposit")}{" "}
+            {match.sellerDepositPaid ? t("match.paid") : t("match.pending")}
           </span>
           <span aria-hidden>·</span>
           <span className={match.buyerDepositPaid ? "text-success" : ""}>
-            Депозит покупателя:{" "}
-            {match.buyerDepositPaid ? "внесён" : "ожидается"}
+            {t("match.buyerDeposit")}{" "}
+            {match.buyerDepositPaid ? t("match.paid") : t("match.pending")}
           </span>
         </div>
       </div>
 
       <div className="flex shrink-0 sm:flex-col sm:items-end">
         {needsMyDeposit ? (
-          <Button href="/dashboard/deposits">Внести депозит</Button>
+          <Button href="/dashboard/deposits">{t("match.payDeposit")}</Button>
         ) : match.status === "confirmed" ? (
           <Link
             href={`/cars/${match.car.id}`}
             className="text-[14px] font-semibold text-brand hover:text-brand-dark"
           >
-            Контакты открыты →
+            {t("match.contactsOpen")}
           </Link>
         ) : (
           <Link
             href="/cars"
             className="text-[14px] font-semibold text-muted-foreground hover:text-foreground"
           >
-            Смотреть похожие
+            {t("match.viewSimilar")}
           </Link>
         )}
       </div>

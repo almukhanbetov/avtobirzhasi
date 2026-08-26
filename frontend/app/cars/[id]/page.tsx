@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Gallery } from "@/components/cars/Gallery";
 import { SpecsGrid } from "@/components/cars/SpecsGrid";
@@ -10,6 +9,7 @@ import { SellerCard } from "@/components/cars/SellerCard";
 import { VehiclePriceSidebar } from "@/components/cars/VehiclePriceSidebar";
 import { SimilarCars } from "@/components/cars/SimilarCars";
 import { FavoriteButton } from "@/components/cars/FavoriteButton";
+import { BackToCarsLink } from "@/components/cars/BackToCarsLink";
 import { getCar, getSimilarCars } from "@/lib/api/cars";
 import { getSeller } from "@/lib/api/sellers";
 import { ApiError } from "@/lib/api/client";
@@ -58,13 +58,7 @@ export default async function CarDetailPage({
   return (
     <div className="py-10 sm:py-14">
       <Container className="flex flex-col gap-10">
-        <Link
-          href="/cars"
-          className="inline-flex w-fit items-center gap-2 text-[15px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft size={16} />
-          Все автомобили
-        </Link>
+        <BackToCarsLink />
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex flex-col gap-2">

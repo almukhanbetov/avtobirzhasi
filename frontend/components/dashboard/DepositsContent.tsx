@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FlaskConical } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DepositRow } from "@/components/dashboard/DepositRow";
@@ -8,9 +9,11 @@ import { RowSkeleton } from "@/components/dashboard/RowSkeleton";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { listMyDeposits, payDeposit } from "@/lib/api/deposits";
 import { ApiError } from "@/lib/api/client";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function DepositsContent() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +35,7 @@ export function DepositsContent() {
       queryClient.invalidateQueries({ queryKey: ["dashboard", "matches"] });
     },
     onError: (err) => {
-      setError(err instanceof ApiError ? err.message : "Не удалось внести депозит");
+      setError(err instanceof ApiError ? err.message : t("dashboard.deposits.payError"));
     },
   });
 
@@ -40,12 +43,16 @@ export function DepositsContent() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <h1 className="text-[28px] font-semibold tracking-tight text-foreground sm:text-[32px]">
-          Депозиты
+          {t("dashboard.nav.deposits")}
         </h1>
         <p className="text-[15px] text-muted-foreground">
-          Депозит 1% подтверждает серьёзность намерений и открывает контакты
-          после Match.
+          {t("dashboard.deposits.subtitle")}
         </p>
+      </div>
+
+      <div className="flex items-start gap-2.5 rounded-xl bg-warning-light p-4 text-[13px] leading-relaxed text-warning">
+        <FlaskConical size={16} className="mt-0.5 shrink-0" />
+        {t("dashboard.deposits.mockNotice")}
       </div>
 
       {error ? <p className="text-[13px] text-destructive">{error}</p> : null}
@@ -57,8 +64,8 @@ export function DepositsContent() {
         </div>
       ) : isError ? (
         <EmptyState
-          title="Не удалось загрузить депозиты"
-          description="Сервер временно недоступен. Попробуйте обновить страницу через минуту."
+          title={t("dashboard.deposits.loadErrorTitle")}
+          description={t("cars.empty.error.description")}
         />
       ) : data && data.length > 0 ? (
         <div className="flex flex-col gap-4">
@@ -73,8 +80,8 @@ export function DepositsContent() {
         </div>
       ) : (
         <EmptyState
-          title="Депозитов пока нет."
-          description="Депозит появится здесь, как только по вашему объявлению или заявке будет найден Match."
+          title={t("dashboard.deposits.emptyTitle")}
+          description={t("dashboard.deposits.emptyDescription")}
         />
       )}
     </div>

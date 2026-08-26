@@ -11,8 +11,10 @@ import { registerSchema, type RegisterFormValues } from "@/lib/validation/auth";
 import { register as registerAccount } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function RegisterForm() {
+  const { t } = useLanguage();
   const router = useRouter();
   const { login: setSession } = useAuth();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export function RegisterForm() {
       setApiError(
         err instanceof ApiError
           ? err.message
-          : "Не удалось создать аккаунт, попробуйте позже",
+          : t("auth.registerError"),
       );
     }
   });
@@ -43,27 +45,27 @@ export function RegisterForm() {
         <p className="text-[13px] text-destructive">{apiError}</p>
       ) : null}
       <Input
-        label="Имя"
+        label={t("auth.name")}
         placeholder="Данияр Кенжебаев"
         error={errors.name?.message}
         {...register("name")}
       />
       <Input
-        label="Телефон"
+        label={t("auth.phone")}
         type="tel"
         placeholder="+7 707 123 45 67"
         error={errors.phone?.message}
         {...register("phone")}
       />
       <PasswordInput
-        label="Пароль"
-        placeholder="Не менее 6 символов"
+        label={t("auth.password")}
+        placeholder={t("auth.passwordMinPlaceholder")}
         error={errors.password?.message}
         {...register("password")}
       />
       <PasswordInput
-        label="Повторите пароль"
-        placeholder="Ещё раз пароль"
+        label={t("auth.confirmPassword")}
+        placeholder={t("auth.confirmPasswordPlaceholder")}
         error={errors.confirmPassword?.message}
         {...register("confirmPassword")}
       />
@@ -73,7 +75,7 @@ export function RegisterForm() {
         disabled={isSubmitting}
         className="w-full"
       >
-        {isSubmitting ? "Создаём аккаунт…" : "Создать аккаунт"}
+        {isSubmitting ? t("auth.creatingAccount") : t("auth.createAccount")}
       </Button>
     </form>
   );

@@ -19,20 +19,30 @@ var (
 	ErrDepositNotPending = errors.New("deposit is not payable")
 )
 
-// DepositService implements the mock "pay deposit" flow: no real payment
-// gateway, just marking a deposit paid, recomputing the parent match's
-// derived status, and creating the contact-unlock notifications once both
-// sides have paid. Like ExchangeService, it owns its transactions directly
+// DepositService implements the "pay deposit" flow: charge the deposit
+// through a PaymentProvider (today, always MockPaymentProvider — see
+// payment.go), then mark it paid, recompute the parent match's derived
+// status, and create the contact-unlock notifications once both sides
+// have paid. Like ExchangeService, it owns its transactions directly
 // against the pool, since paying a deposit touches deposits, matches and
 // notifications atomically.
 type DepositService struct {
-	db *pgxpool.Pool
+	db       *pgxpool.Pool
+	provider PaymentProvider
 }
 
-// NewDepositService creates a DepositService.
-func NewDepositService(db *pgxpool.Pool) *DepositService {
-	return &DepositService{db: db}
+// NewDepositService creates a DepositService backed by the given
+// PaymentProvider. Pass a real provider once one exists; every call site
+// today passes NewMockPaymentProvider().
+func NewDepositService(db *pgxpool.Pool, provider PaymentProvider) *DepositService {
+	return &DepositService{db: db, provider: provider}
 }
+
+// ErrPaymentFailed wraps a PaymentProvider.Charge failure — kept distinct
+// from the ownership/state errors below since it means the request was
+// otherwise valid, but the charge itself (once a real provider exists)
+// was declined or errored.
+var ErrPaymentFailed = errors.New("payment provider declined the charge")
 
 // PaidDeposit is what Pay returns on success.
 type PaidDeposit struct {
@@ -42,10 +52,10 @@ type PaidDeposit struct {
 	MatchStatus string
 }
 
-// Pay handles one mock deposit payment. The ownership check is re-done here
-// under row lock (not just trusted from the handler layer) since this is
-// the money-moving operation. Rejects deposits that are already
-// paid/refunded, or whose match already reached a terminal state
+// Pay handles one deposit payment via s.provider. The ownership check is
+// re-done here under row lock (not just trusted from the handler layer)
+// since this is the money-moving operation. Rejects deposits that are
+// already paid/refunded, or whose match already reached a terminal state
 // (expired/cancelled).
 func (s *DepositService) Pay(ctx context.Context, depositID, userID string) (*PaidDeposit, error) {
 	tx, err := s.db.Begin(ctx)
@@ -58,11 +68,12 @@ func (s *DepositService) Pay(ctx context.Context, depositID, userID string) (*Pa
 		ID      string
 		MatchID string
 		UserID  string
+		Amount  int64
 		Status  string
 	}
 	err = tx.QueryRow(ctx,
-		`SELECT id, match_id, user_id, status FROM deposits WHERE id = $1 FOR UPDATE`, depositID,
-	).Scan(&deposit.ID, &deposit.MatchID, &deposit.UserID, &deposit.Status)
+		`SELECT id, match_id, user_id, amount, status FROM deposits WHERE id = $1 FOR UPDATE`, depositID,
+	).Scan(&deposit.ID, &deposit.MatchID, &deposit.UserID, &deposit.Amount, &deposit.Status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrDepositNotFound
 	}
@@ -87,8 +98,17 @@ func (s *DepositService) Pay(ctx context.Context, depositID, userID string) (*Pa
 		return nil, ErrDepositNotPending
 	}
 
+	// The charge happens inside the same row-locked transaction as the
+	// status flip below, so a provider failure leaves the deposit
+	// untouched (the transaction rolls back) rather than half-applied.
+	reference, err := s.provider.Charge(ctx, deposit.ID, deposit.Amount)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrPaymentFailed, err)
+	}
+
 	if _, err := tx.Exec(ctx,
-		`UPDATE deposits SET status = 'paid', paid_at = now() WHERE id = $1`, depositID,
+		`UPDATE deposits SET status = 'paid', paid_at = now(), provider = $2, provider_reference = $3 WHERE id = $1`,
+		depositID, s.provider.Name(), reference,
 	); err != nil {
 		return nil, err
 	}

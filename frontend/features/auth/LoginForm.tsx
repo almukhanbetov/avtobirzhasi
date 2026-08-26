@@ -11,8 +11,10 @@ import { loginSchema, type LoginFormValues } from "@/lib/validation/auth";
 import { login } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function LoginForm() {
+  const { t } = useLanguage();
   const router = useRouter();
   const { login: setSession } = useAuth();
   const [apiError, setApiError] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export function LoginForm() {
       router.push("/dashboard");
     } catch (err) {
       setApiError(
-        err instanceof ApiError ? err.message : "Не удалось войти, попробуйте позже",
+        err instanceof ApiError ? err.message : t("auth.loginError"),
       );
     }
   });
@@ -41,15 +43,15 @@ export function LoginForm() {
         <p className="text-[13px] text-destructive">{apiError}</p>
       ) : null}
       <Input
-        label="Телефон"
+        label={t("auth.phone")}
         type="tel"
         placeholder="+7 707 123 45 67"
         error={errors.phone?.message}
         {...register("phone")}
       />
       <PasswordInput
-        label="Пароль"
-        placeholder="Введите пароль"
+        label={t("auth.password")}
+        placeholder={t("auth.enterPassword")}
         error={errors.password?.message}
         {...register("password")}
       />
@@ -59,7 +61,7 @@ export function LoginForm() {
         disabled={isSubmitting}
         className="w-full"
       >
-        {isSubmitting ? "Входим…" : "Войти"}
+        {isSubmitting ? t("auth.loggingIn") : t("header.login")}
       </Button>
     </form>
   );

@@ -31,6 +31,8 @@ export interface AdminStats {
   };
 }
 
-export function getAdminStats(): Promise<AdminStats> {
-  return internalFetch<AdminStats>("/internal/admin/stats");
+// Requires an admin-role JWT (middleware.Auth + middleware.AdminOnly on the
+// backend) — see STAGE1_ADMIN_AUTHORIZATION_REPORT.md.
+export function getAdminStats(token: string): Promise<AdminStats> {
+  return internalFetch<AdminStats>("/internal/admin/stats", { token });
 }

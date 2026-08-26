@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminReviewsPage() {
-  return <AdminComingSoon title="Отзывы" />;
+  return <AdminComingSoon titleKey="admin.reviews.title" />;
 }

@@ -1,7 +1,9 @@
-export const navLinks = [
-  { href: "/cars", label: "Автомобили" },
-  { href: "/buy", label: "Купить" },
-  { href: "/sell", label: "Продать" },
-  { href: "/exchange", label: "Автобиржа" },
-  { href: "/how-it-works", label: "Как это работает" },
+import type { TranslationKey } from "@/lib/i18n/translations";
+
+export const navLinks: { href: string; labelKey: TranslationKey }[] = [
+  { href: "/cars", labelKey: "nav.cars" },
+  { href: "/buy", labelKey: "nav.buy" },
+  { href: "/sell", labelKey: "nav.sell" },
+  { href: "/exchange", labelKey: "nav.exchange" },
+  { href: "/how-it-works", labelKey: "nav.howItWorks" },
 ];

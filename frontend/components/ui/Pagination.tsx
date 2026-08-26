@@ -1,8 +1,11 @@
+"use client";
+
 import Link from "next/link";
 import type { AnchorHTMLAttributes, ReactNode } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { buildHref, type RawSearchParams } from "@/lib/url/searchParams";
 import { cn } from "@/lib/utils";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 type PageEntry = number | "gap";
 
@@ -68,19 +71,21 @@ export function Pagination({
   pathname: string;
   searchParams: RawSearchParams;
 }) {
+  const { t } = useLanguage();
+
   if (totalPages <= 1) return null;
 
   const pages = getPageWindow(page, totalPages);
 
   return (
     <nav
-      aria-label="Пагинация"
+      aria-label={t("pagination.ariaLabel")}
       className="flex items-center justify-center gap-1.5"
     >
       <PageLink
         href={buildHref(pathname, searchParams, { page: page - 1 })}
         disabled={page <= 1}
-        aria-label="Предыдущая страница"
+        aria-label={t("pagination.prev")}
       >
         <ChevronLeft size={18} />
       </PageLink>
@@ -107,7 +112,7 @@ export function Pagination({
       <PageLink
         href={buildHref(pathname, searchParams, { page: page + 1 })}
         disabled={page >= totalPages}
-        aria-label="Следующая страница"
+        aria-label={t("pagination.next")}
       >
         <ChevronRight size={18} />
       </PageLink>

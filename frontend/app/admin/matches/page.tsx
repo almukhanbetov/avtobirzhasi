@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminMatchesPage() {
-  return <AdminComingSoon title="Matches" />;
+  return <AdminComingSoon titleKey="dashboard.nav.matches" />;
 }

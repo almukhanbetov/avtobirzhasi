@@ -1,3 +1,5 @@
+"use client";
+
 import type { Car } from "@/types/car";
 import {
   bodyTypeLabels,
@@ -6,26 +8,29 @@ import {
   steeringWheelLabels,
   transmissionLabels,
 } from "@/lib/labels/car";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function SpecsGrid({ car }: { car: Car }) {
+  const { lang, t } = useLanguage();
+
   const specs = [
-    { label: "Год", value: String(car.year) },
-    { label: "Пробег", value: `${car.mileageKm.toLocaleString("ru-RU")} км` },
+    { label: t("specs.year"), value: String(car.year) },
+    { label: t("specs.mileage"), value: `${car.mileageKm.toLocaleString("ru-RU")} км` },
     {
-      label: "Двигатель",
-      value: `${car.engineVolume.toFixed(1)} л · ${car.enginePower} л.с. · ${fuelTypeLabels[car.fuelType]}`,
+      label: t("specs.engine"),
+      value: `${car.engineVolume.toFixed(1)} л · ${car.enginePower} л.с. · ${fuelTypeLabels[lang][car.fuelType]}`,
     },
-    { label: "Коробка", value: transmissionLabels[car.transmission] },
-    { label: "Привод", value: drivetrainLabels[car.drivetrain] },
-    { label: "Кузов", value: bodyTypeLabels[car.bodyType] },
-    { label: "Цвет", value: car.color },
-    { label: "Руль", value: steeringWheelLabels[car.steeringWheel] },
+    { label: t("specs.transmission"), value: transmissionLabels[lang][car.transmission] },
+    { label: t("specs.drivetrain"), value: drivetrainLabels[lang][car.drivetrain] },
+    { label: t("specs.bodyType"), value: bodyTypeLabels[lang][car.bodyType] },
+    { label: t("specs.color"), value: car.color },
+    { label: t("specs.steeringWheel"), value: steeringWheelLabels[lang][car.steeringWheel] },
   ];
 
   return (
     <div className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-6 sm:p-8">
       <h2 className="text-xl font-semibold tracking-tight text-foreground">
-        Характеристики
+        {t("specs.title")}
       </h2>
       <div className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
         {specs.map((spec) => (

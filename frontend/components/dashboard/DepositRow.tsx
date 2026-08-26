@@ -1,8 +1,12 @@
+"use client";
+
 import Image from "next/image";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { formatTenge } from "@/lib/format/money";
+import { formatShortDate } from "@/lib/format/date";
 import { depositStatusLabels } from "@/lib/labels/dashboard";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import type { Deposit } from "@/types/dashboard";
 
 export function DepositRow({
@@ -14,7 +18,8 @@ export function DepositRow({
   onPay?: () => void;
   isPaying?: boolean;
 }) {
-  const status = depositStatusLabels[deposit.status];
+  const { lang, t } = useLanguage();
+  const status = depositStatusLabels[lang][deposit.status];
 
   return (
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
@@ -36,7 +41,7 @@ export function DepositRow({
           <Badge variant={status.variant}>{status.label}</Badge>
         </div>
         <span className="text-[13px] text-muted-foreground">
-          {new Date(deposit.date).toLocaleDateString("ru-RU")}
+          {formatShortDate(deposit.date, lang)}
         </span>
       </div>
 
@@ -46,7 +51,7 @@ export function DepositRow({
         </span>
         {deposit.status === "pending" ? (
           <Button size="md" onClick={onPay} disabled={isPaying}>
-            {isPaying ? "Оплата…" : "Оплатить"}
+            {isPaying ? t("row.paying") : t("row.pay")}
           </Button>
         ) : null}
       </div>

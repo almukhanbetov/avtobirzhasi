@@ -1,26 +1,30 @@
+"use client";
+
 import { CheckCircle2, Lock, Unlock } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-
-const checklist = [
-  "Депозит от продавца подтверждён",
-  "Депозит от покупателя подтверждён",
-  "Номера телефонов открыты обеим сторонам",
-];
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function TrustSection() {
+  const { t } = useLanguage();
+
+  const checklist = [
+    t("home.trust.checklist1"),
+    t("home.trust.checklist2"),
+    t("home.trust.checklist3"),
+  ];
+
   return (
     <section className="py-20 sm:py-28">
       <Container className="grid grid-cols-1 items-center gap-14 lg:grid-cols-2 lg:gap-16">
         <div className="flex flex-col gap-6">
           <SectionHeader
-            eyebrow="Безопасность сделки"
-            title="Контакты открываются только двум подтверждённым сторонам"
-            description="Депозит 1% — это не оплата автомобиля, а подтверждение серьёзности намерений. Пока не внесены оба депозита, объявления заморожены, а номера телефонов скрыты."
+            eyebrow={t("home.trust.eyebrow")}
+            title={t("home.trust.title")}
+            description={t("home.trust.description")}
           />
           <p className="text-[15px] leading-relaxed text-muted-foreground">
-            Это защищает продавцов от случайных звонков и защищает покупателей
-            от продавцов, которые передумали в последний момент.
+            {t("home.trust.note")}
           </p>
         </div>
 
@@ -30,7 +34,7 @@ export function TrustSection() {
               <Lock size={20} />
             </span>
             <span className="text-[15px] font-medium text-muted-foreground">
-              Match создан, объявления заморожены
+              {t("home.trust.matchCreated")}
             </span>
           </div>
 
@@ -51,7 +55,7 @@ export function TrustSection() {
               <Unlock size={20} />
             </span>
             <span className="text-[15px] font-medium text-foreground">
-              Контакты открыты — можно договариваться о сделке
+              {t("home.trust.contactsOpen")}
             </span>
           </div>
         </div>

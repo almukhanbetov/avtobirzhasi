@@ -1,11 +1,17 @@
+"use client";
+
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+
 export function PriceConvergenceDiagram() {
+  const { t } = useLanguage();
+
   return (
     <div className="relative w-full rounded-2xl border border-border bg-surface p-6 sm:p-10">
       <svg
         viewBox="0 0 720 220"
         className="h-auto w-full"
         role="img"
-        aria-label="Цена продавца снижается, цена покупателя растёт, пока они не встретятся в точке Match"
+        aria-label={t("exchange.diagram.ariaLabel")}
       >
         <line
           x1="0"
@@ -59,7 +65,7 @@ export function PriceConvergenceDiagram() {
           fontSize="15"
           fontWeight="600"
         >
-          Продавец: −1% в сутки
+          {t("exchange.diagram.seller")}
         </text>
         <text
           x="30"
@@ -68,7 +74,7 @@ export function PriceConvergenceDiagram() {
           fontSize="15"
           fontWeight="600"
         >
-          Покупатель: +1% в сутки
+          {t("exchange.diagram.buyer")}
         </text>
         <text
           x="497"

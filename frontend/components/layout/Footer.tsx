@@ -1,51 +1,59 @@
+"use client";
+
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { Logo } from "@/components/layout/Logo";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import type { TranslationKey } from "@/lib/i18n/translations";
 
-const columns = [
+const columns: {
+  titleKey: TranslationKey;
+  links: { href: string; labelKey: TranslationKey }[];
+}[] = [
   {
-    title: "Покупателям",
+    titleKey: "footer.buyers",
     links: [
-      { href: "/cars", label: "Все автомобили" },
-      { href: "/buy", label: "Купить сейчас" },
-      { href: "/exchange", label: "Купить через Автобиржу" },
-      { href: "/dashboard/favorites", label: "Избранное" },
+      { href: "/cars", labelKey: "footer.allCars" },
+      { href: "/buy", labelKey: "footer.buyNow" },
+      { href: "/exchange", labelKey: "footer.buyViaExchange" },
+      { href: "/dashboard/favorites", labelKey: "footer.favorites" },
     ],
   },
   {
-    title: "Продавцам",
+    titleKey: "footer.sellers",
     links: [
-      { href: "/sell/new", label: "Подать объявление" },
-      { href: "/sell", label: "Как продать быстрее" },
-      { href: "/how-it-works", label: "Как это работает" },
+      { href: "/sell/new", labelKey: "footer.postAd" },
+      { href: "/sell", labelKey: "footer.howToSellFaster" },
+      { href: "/how-it-works", labelKey: "footer.howItWorks" },
     ],
   },
   {
-    title: "Компания",
+    titleKey: "footer.company",
     links: [
-      { href: "/about", label: "О нас" },
-      { href: "/safety", label: "Безопасность сделок" },
-      { href: "/contacts", label: "Контакты" },
+      { href: "/about", labelKey: "footer.about" },
+      { href: "/safety", labelKey: "footer.safety" },
+      { href: "/contacts", labelKey: "footer.contacts" },
     ],
   },
 ];
 
 export function Footer() {
+  const { t } = useLanguage();
+
   return (
     <footer className="border-t border-border bg-surface">
       <Container className="grid grid-cols-1 gap-12 py-16 sm:grid-cols-2 lg:grid-cols-[1.3fr_1fr_1fr_1fr]">
         <div className="flex flex-col gap-4">
           <Logo />
           <p className="max-w-xs text-[15px] text-muted-foreground">
-            Автомобильная биржа Казахстана. Покупайте и продавайте по цене,
-            которая устраивает обе стороны.
+            {t("footer.tagline")}
           </p>
         </div>
 
         {columns.map((column) => (
-          <div key={column.title} className="flex flex-col gap-4">
+          <div key={column.titleKey} className="flex flex-col gap-4">
             <span className="text-[15px] font-semibold text-foreground">
-              {column.title}
+              {t(column.titleKey)}
             </span>
             <nav className="flex flex-col gap-3">
               {column.links.map((link) => (
@@ -54,7 +62,7 @@ export function Footer() {
                   href={link.href}
                   className="text-[15px] text-muted-foreground transition-colors hover:text-foreground"
                 >
-                  {link.label}
+                  {t(link.labelKey)}
                 </Link>
               ))}
             </nav>
@@ -64,8 +72,8 @@ export function Footer() {
 
       <div className="border-t border-border">
         <Container className="flex flex-col gap-2 py-6 text-[13px] text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <span>© 2026 AVTOBIRZHASI.KZ. Все права защищены.</span>
-          <span>Казахстан</span>
+          <span>{t("footer.rights")}</span>
+          <span>{t("footer.country")}</span>
         </Container>
       </div>
     </footer>

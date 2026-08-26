@@ -66,12 +66,17 @@ func (h *DepositsHandler) ListMine(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
-// Pay handles POST /api/deposits/:id/pay (owner of that deposit only) — a
-// mock payment, no real gateway. See service.DepositService.Pay for the
+// Pay handles POST /api/deposits/:id/pay (owner of that deposit only).
+// Charges through DepositService's configured PaymentProvider — today,
+// always MockPaymentProvider, so no real money moves yet (see
+// service/payment.go). See service.DepositService.Pay for the
 // derived-status and notification logic.
 func (h *DepositsHandler) Pay(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
-	id := c.Param("id")
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	result, err := h.pay.Pay(c.Request.Context(), id, userID)
 	switch {
@@ -81,6 +86,8 @@ func (h *DepositsHandler) Pay(c *gin.Context) {
 		respondError(c, http.StatusForbidden, "FORBIDDEN", "Это не ваш депозит")
 	case errors.Is(err, service.ErrDepositNotPending):
 		respondError(c, http.StatusConflict, "CONFLICT", "Депозит уже обработан или сделка закрыта")
+	case errors.Is(err, service.ErrPaymentFailed):
+		respondError(c, http.StatusBadGateway, "PAYMENT_FAILED", "Платёж не прошёл, попробуйте ещё раз")
 	case err != nil:
 		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось внести депозит")
 	default:

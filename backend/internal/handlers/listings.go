@@ -121,11 +121,11 @@ func (h *ListingsHandler) Create(c *gin.Context) {
 }
 
 type updateListingRequest struct {
-	Price       *int64  `json:"price"`
-	MileageKm   *int    `json:"mileageKm"`
+	Price       *int64  `json:"price" binding:"omitempty,min=1"`
+	MileageKm   *int    `json:"mileageKm" binding:"omitempty,min=0"`
 	Description *string `json:"description"`
-	Region      *string `json:"region"`
-	Color       *string `json:"color"`
+	Region      *string `json:"region" binding:"omitempty,min=1"`
+	Color       *string `json:"color" binding:"omitempty,min=1"`
 }
 
 // loadOwnedListing loads a listing and verifies the authenticated user
@@ -153,15 +153,28 @@ func (h *ListingsHandler) loadOwnedListing(c *gin.Context, userID, id string) (*
 // make/model/year/engine specs is treated as "list a new car" instead.
 func (h *ListingsHandler) Update(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
-	id := c.Param("id")
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
-	if _, ok := h.loadOwnedListing(c, userID, id); !ok {
+	listing, ok := h.loadOwnedListing(c, userID, id)
+	if !ok {
 		return
 	}
 
 	var req updateListingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", "Проверьте правильность заполнения полей")
+		return
+	}
+
+	// Auto Exchange listings move only via the daily ±1% engine
+	// (ExchangeService.decayListingPrices) — direct price edits here would
+	// let the owner bypass the fairness mechanic entirely (force an
+	// instant match, or freeze the price after an expiry resumes it).
+	if req.Price != nil && listing.IsExchange {
+		respondError(c, http.StatusConflict, "EXCHANGE_MANAGED_FIELD", "Цена управляется автообменом и не может быть изменена вручную")
 		return
 	}
 
@@ -202,7 +215,10 @@ func (h *ListingsHandler) Update(c *gin.Context) {
 // per SKILL.md: status becomes "archived", the row is kept.
 func (h *ListingsHandler) Archive(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
-	id := c.Param("id")
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
 
 	if _, ok := h.loadOwnedListing(c, userID, id); !ok {
 		return

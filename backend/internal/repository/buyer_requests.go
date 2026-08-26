@@ -83,6 +83,14 @@ func (r *BuyerRequestRepository) ListByUser(ctx context.Context, userID string) 
 	return out, rows.Err()
 }
 
+// SetStatus transitions a buyer request's status (e.g. to "archived" for a
+// user-initiated cancel — see ListingRepository.SetStatus, same pattern).
+func (r *BuyerRequestRepository) SetStatus(ctx context.Context, id, status string) error {
+	_, err := r.db.Exec(ctx,
+		`UPDATE buyer_requests SET status = $1, updated_at = now() WHERE id = $2`, status, id)
+	return err
+}
+
 // Update sets the given columns on a buyer request and bumps updated_at.
 // Keys in fields must be literal, handler-controlled column names — see
 // ListingRepository.Update's doc comment for why this is safe.

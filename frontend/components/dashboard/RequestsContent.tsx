@@ -7,9 +7,11 @@ import { RequestRow } from "@/components/dashboard/RequestRow";
 import { RowSkeleton } from "@/components/dashboard/RowSkeleton";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { listMyRequests } from "@/lib/api/requests";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function RequestsContent() {
   const { token } = useAuth();
+  const { t } = useLanguage();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["dashboard", "requests"],
     queryFn: () => listMyRequests(token as string),
@@ -21,13 +23,13 @@ export function RequestsContent() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-col gap-2">
           <h1 className="text-[28px] font-semibold tracking-tight text-foreground sm:text-[32px]">
-            Заявки на покупку
+            {t("dashboard.nav.requests")}
           </h1>
           <p className="text-[15px] text-muted-foreground">
-            Ваши заявки на Автобирже и текущее предложение по ним.
+            {t("dashboard.requests.subtitle")}
           </p>
         </div>
-        <Button href="/exchange/new">Создать заявку</Button>
+        <Button href="/exchange/new">{t("dashboard.requests.createCta")}</Button>
       </div>
 
       {isLoading ? (
@@ -37,8 +39,8 @@ export function RequestsContent() {
         </div>
       ) : isError ? (
         <EmptyState
-          title="Не удалось загрузить заявки"
-          description="Сервер временно недоступен. Попробуйте обновить страницу через минуту."
+          title={t("dashboard.requests.loadErrorTitle")}
+          description={t("cars.empty.error.description")}
         />
       ) : data && data.length > 0 ? (
         <div className="flex flex-col gap-4">
@@ -48,10 +50,10 @@ export function RequestsContent() {
         </div>
       ) : (
         <EmptyState
-          title="У вас пока нет заявок на покупку."
-          description="Создайте заявку, и Автобиржа будет искать подходящий автомобиль автоматически."
+          title={t("dashboard.requests.emptyTitle")}
+          description={t("dashboard.requests.emptyDescription")}
           secondaryHref="/exchange/new"
-          secondaryLabel="Создать заявку"
+          secondaryLabel={t("dashboard.requests.createCta")}
         />
       )}
     </div>

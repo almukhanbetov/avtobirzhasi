@@ -1,14 +1,18 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
 import { Gauge, MapPin } from "lucide-react";
 import type { Car } from "@/types/car";
 import { formatMileage, formatTenge } from "@/lib/format/money";
 import { transmissionLabels } from "@/lib/labels/car";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { MatchIndicator } from "@/components/exchange/MatchIndicator";
 import { PriceMovement } from "@/components/exchange/PriceMovement";
 import { FavoriteButton } from "@/components/cars/FavoriteButton";
 
 export function CarCard({ car }: { car: Car }) {
+  const { lang } = useLanguage();
   const title = `${car.make} ${car.model}`;
 
   return (
@@ -54,7 +58,7 @@ export function CarCard({ car }: { car: Car }) {
             <Gauge size={14} />
             {formatMileage(car.mileageKm)}
           </span>
-          <span>{transmissionLabels[car.transmission]}</span>
+          <span>{transmissionLabels[lang][car.transmission]}</span>
           <span className="inline-flex items-center gap-1.5">
             <MapPin size={14} />
             {car.region}

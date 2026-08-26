@@ -24,3 +24,22 @@ export function createRequest(
     body: input,
   });
 }
+
+export function updateRequest(
+  token: string,
+  id: string,
+  input: { region: string },
+): Promise<BuyerRequest> {
+  return apiFetch<BuyerRequest>(`/requests/${id}`, {
+    method: "PATCH",
+    token,
+    body: input,
+  });
+}
+
+export function cancelRequest(token: string, id: string): Promise<void> {
+  return apiFetch<void>(`/requests/${id}`, {
+    method: "DELETE",
+    token,
+  });
+}

@@ -1,7 +1,10 @@
+"use client";
+
 import { Star } from "lucide-react";
-import type { Seller } from "@/lib/mock/sellers";
+import type { Seller } from "@/types/seller";
 import { Badge } from "@/components/ui/Badge";
 import { PhoneReveal } from "@/components/cars/PhoneReveal";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 function initials(name: string): string {
   return name
@@ -13,10 +16,12 @@ function initials(name: string): string {
 }
 
 export function SellerCard({ seller }: { seller: Seller }) {
+  const { t } = useLanguage();
+
   return (
     <div className="flex flex-col gap-6 rounded-2xl border border-border bg-surface p-6 sm:p-8">
       <h2 className="text-xl font-semibold tracking-tight text-foreground">
-        Продавец
+        {t("seller.title")}
       </h2>
 
       <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -30,9 +35,11 @@ export function SellerCard({ seller }: { seller: Seller }) {
             </span>
             <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
               <Badge variant="outline">
-                {seller.type === "dealer" ? "Автосалон" : "Частное лицо"}
+                {seller.type === "dealer" ? t("seller.dealer") : t("seller.private")}
               </Badge>
-              <span>на сайте {seller.since}</span>
+              <span>
+                {t("seller.since")} {seller.since}
+              </span>
             </div>
           </div>
         </div>
@@ -43,7 +50,7 @@ export function SellerCard({ seller }: { seller: Seller }) {
             {seller.rating.toFixed(1)}
           </span>
           <span className="text-muted-foreground">
-            ({seller.reviewsCount} отзывов)
+            ({seller.reviewsCount} {t("seller.reviewsSuffix")})
           </span>
         </div>
       </div>

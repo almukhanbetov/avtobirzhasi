@@ -1,42 +1,43 @@
+"use client";
+
 import { Eye, Gauge, ShieldCheck, Sparkles } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-
-const benefits = [
-  {
-    icon: Sparkles,
-    title: "Автоматический подбор",
-    description:
-      "Не нужно вручную искать совпадения — Автобиржа сама сводит цены и участников.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Реальные намерения",
-    description:
-      "Депозит с обеих сторон подтверждает, что сделка серьёзная, а не праздный интерес.",
-  },
-  {
-    icon: Eye,
-    title: "Прозрачное движение цены",
-    description:
-      "Вы всегда видите, как меняется цена и на сколько она приблизилась к сделке.",
-  },
-  {
-    icon: Gauge,
-    title: "Контролируемый процесс",
-    description:
-      "Контакты открываются только после подтверждения обеих сторон — без спама и случайных звонков.",
-  },
-];
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function WhyUs() {
+  const { t } = useLanguage();
+
+  const benefits = [
+    {
+      icon: Sparkles,
+      title: t("home.whyUs.benefit1.title"),
+      description: t("home.whyUs.benefit1.description"),
+    },
+    {
+      icon: ShieldCheck,
+      title: t("home.whyUs.benefit2.title"),
+      description: t("home.whyUs.benefit2.description"),
+    },
+    {
+      icon: Eye,
+      title: t("home.whyUs.benefit3.title"),
+      description: t("home.whyUs.benefit3.description"),
+    },
+    {
+      icon: Gauge,
+      title: t("home.whyUs.benefit4.title"),
+      description: t("home.whyUs.benefit4.description"),
+    },
+  ];
+
   return (
     <section className="bg-surface py-20 sm:py-28">
       <Container className="flex flex-col gap-12">
         <SectionHeader
           align="center"
-          eyebrow="Почему AVTOBIRZHASI"
-          title="Преимущества платформы"
+          eyebrow={t("home.whyUs.eyebrow")}
+          title={t("home.whyUs.title")}
         />
 
         <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-4">

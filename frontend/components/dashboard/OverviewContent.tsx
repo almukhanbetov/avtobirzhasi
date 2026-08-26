@@ -15,51 +15,52 @@ import { TaskItem } from "@/components/dashboard/TaskItem";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { getDashboardOverview, type DashboardTask } from "@/lib/api/dashboard";
-
-const dateFormatter = new Intl.DateTimeFormat("ru-RU", {
-  day: "numeric",
-  month: "long",
-  hour: "2-digit",
-  minute: "2-digit",
-});
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { formatDateTime } from "@/lib/format/date";
+import type { Lang, TranslationKey } from "@/lib/i18n/translations";
 
 // Short, per-type chrome — the actual copy comes from the backend's
 // task.message, so these titles are deliberately distinct wording (not a
 // repeat of the message) to avoid reading the same phrase twice.
 const taskConfig: Record<
   DashboardTask["type"],
-  { icon: LucideIcon; title: string; href: string; cta: string; tone?: "warning" }
+  { icon: LucideIcon; titleKey: TranslationKey; href: string; ctaKey: TranslationKey; tone?: "warning" }
 > = {
   deposit_required: {
     icon: Wallet,
-    title: "Депозит",
+    titleKey: "dashboard.overview.task.deposit",
     href: "/dashboard/deposits",
-    cta: "Внести депозит",
+    ctaKey: "match.payDeposit",
     tone: "warning",
   },
   moderation: {
     icon: LayoutGrid,
-    title: "Модерация",
+    titleKey: "dashboard.overview.task.moderation",
     href: "/dashboard/listings",
-    cta: "Посмотреть",
+    ctaKey: "dashboard.overview.task.moderationCta",
   },
   notification: {
     icon: Bell,
-    title: "Новое уведомление",
+    titleKey: "dashboard.overview.task.newNotification",
     href: "/dashboard/notifications",
-    cta: "Открыть",
+    ctaKey: "row.open",
   },
 };
 
-function taskDescription(task: DashboardTask): string {
+function taskDescription(
+  task: DashboardTask,
+  lang: Lang,
+  t: (key: TranslationKey) => string,
+): string {
   if (task.type === "deposit_required" && task.deadline) {
-    return `${task.message} — дедлайн ${dateFormatter.format(new Date(task.deadline))}`;
+    return `${task.message} — ${t("dashboard.overview.deadlinePrefix")} ${formatDateTime(task.deadline, lang)}`;
   }
   return task.message;
 }
 
 export function OverviewContent() {
   const { token } = useAuth();
+  const { lang, t } = useLanguage();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["dashboard", "overview"],
     queryFn: () => getDashboardOverview(token as string),
@@ -70,10 +71,10 @@ export function OverviewContent() {
     <div className="flex flex-col gap-10">
       <div className="flex flex-col gap-2">
         <h1 className="text-[28px] font-semibold tracking-tight text-foreground sm:text-[32px]">
-          Обзор
+          {t("dashboard.nav.overview")}
         </h1>
         <p className="text-[15px] text-muted-foreground">
-          Главное о ваших объявлениях, заявках и сделках на Автобирже.
+          {t("dashboard.overview.subtitle")}
         </p>
       </div>
 
@@ -86,33 +87,32 @@ export function OverviewContent() {
         </div>
       ) : isError || !data ? (
         <p className="rounded-2xl border border-border bg-surface p-5 text-[15px] text-muted-foreground">
-          Не удалось загрузить обзор. Попробуйте обновить страницу через
-          минуту.
+          {t("dashboard.overview.loadError")}
         </p>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <SummaryCard
               icon={LayoutGrid}
-              label="Активные объявления"
+              label={t("dashboard.overview.activeListings")}
               value={data.activeListings}
             />
             <SummaryCard
               icon={FileText}
-              label="Заявки на покупку"
+              label={t("dashboard.nav.requests")}
               value={data.buyerRequests}
             />
             <SummaryCard
               icon={Gauge}
-              label="Активные Match"
+              label={t("dashboard.overview.activeMatches")}
               value={data.activeMatches}
             />
-            <SummaryCard icon={Heart} label="Избранное" value={data.favorites} />
+            <SummaryCard icon={Heart} label={t("header.favorites")} value={data.favorites} />
           </div>
 
           <div className="flex flex-col gap-4">
             <h2 className="text-[17px] font-semibold tracking-tight text-foreground">
-              Требуют внимания
+              {t("dashboard.overview.needsAttention")}
             </h2>
 
             <div className="flex flex-col gap-3">
@@ -124,17 +124,16 @@ export function OverviewContent() {
                       key={task.type}
                       icon={config.icon}
                       tone={config.tone}
-                      title={config.title}
-                      description={taskDescription(task)}
+                      title={t(config.titleKey)}
+                      description={taskDescription(task, lang, t)}
                       href={config.href}
-                      cta={config.cta}
+                      cta={t(config.ctaKey)}
                     />
                   );
                 })
               ) : (
                 <p className="rounded-2xl border border-border bg-surface p-5 text-[15px] text-muted-foreground">
-                  Активных задач нет — мы сообщим, когда что-то потребует
-                  вашего внимания.
+                  {t("dashboard.overview.noTasks")}
                 </p>
               )}
             </div>

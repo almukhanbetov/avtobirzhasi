@@ -15,6 +15,7 @@ type User struct {
 	Email        *string
 	Region       *string
 	AccountType  string
+	Role         string
 	Rating       float64
 	ReviewsCount int
 	CreatedAt    time.Time

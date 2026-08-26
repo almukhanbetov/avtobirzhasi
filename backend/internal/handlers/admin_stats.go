@@ -8,8 +8,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// AdminStatsHandler exposes the internal, LocalOnly-protected admin
-// dashboard stats endpoint.
+// AdminStatsHandler exposes the internal admin dashboard stats endpoint,
+// mounted behind middleware.LocalOnly() + middleware.Auth() +
+// middleware.AdminOnly() (see cmd/api/main.go).
 type AdminStatsHandler struct {
 	admin *repository.AdminRepository
 }
@@ -20,7 +21,8 @@ func NewAdminStatsHandler(admin *repository.AdminRepository) *AdminStatsHandler 
 }
 
 // RegisterAdminStatsRoutes wires the internal route. Callers must mount
-// this under a router group protected by middleware.LocalOnly().
+// this under a router group protected by middleware.LocalOnly(),
+// middleware.Auth() and middleware.AdminOnly().
 func RegisterAdminStatsRoutes(router *gin.RouterGroup, h *AdminStatsHandler) {
 	router.GET("/admin/stats", h.Get)
 }

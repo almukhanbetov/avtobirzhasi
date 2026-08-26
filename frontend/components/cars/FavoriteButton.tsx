@@ -5,6 +5,7 @@ import { Heart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { useFavorites } from "@/lib/favorites/useFavorites";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function FavoriteButton({
   carId,
@@ -15,6 +16,7 @@ export function FavoriteButton({
   className?: string;
   label: string;
 }) {
+  const { t } = useLanguage();
   const router = useRouter();
   const { status } = useAuth();
   const { favoriteIds, toggle, isMutating } = useFavorites();
@@ -33,7 +35,9 @@ export function FavoriteButton({
       type="button"
       aria-pressed={active}
       aria-label={
-        active ? `Убрать «${label}» из избранного` : `Добавить «${label}» в избранное`
+        active
+          ? `${t("favorite.removeAction")} «${label}» ${t("favorite.removeSuffix")}`
+          : `${t("favorite.addAction")} «${label}» ${t("favorite.addSuffix")}`
       }
       onClick={handleClick}
       disabled={isMutating}

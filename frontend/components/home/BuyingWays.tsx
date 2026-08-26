@@ -1,45 +1,48 @@
+"use client";
+
 import { ArrowRight, GitMerge, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
-
-const ways = [
-  {
-    icon: ShoppingBag,
-    title: "Купить сейчас",
-    description:
-      "Выбирайте из готовых объявлений и связывайтесь с продавцом напрямую по опубликованной цене.",
-    points: [
-      "Актуальные цены от собственников",
-      "Прямая связь с продавцом",
-      "Можно оформить сделку сегодня",
-    ],
-    href: "/cars",
-    cta: "Смотреть автомобили",
-  },
-  {
-    icon: GitMerge,
-    title: "Купить через Автобиржу",
-    description:
-      "Укажите цену, которую готовы заплатить. Система сама сведёт вас с продавцом, когда цены сойдутся.",
-    points: [
-      "Цена продавца снижается, ваша — растёт",
-      "Match создаётся автоматически",
-      "Контакты открываются после депозита",
-    ],
-    href: "/exchange",
-    cta: "Создать заявку на покупку",
-  },
-];
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function BuyingWays() {
+  const { t } = useLanguage();
+
+  const ways = [
+    {
+      icon: ShoppingBag,
+      title: t("home.buyingWays.way1.title"),
+      description: t("home.buyingWays.way1.description"),
+      points: [
+        t("home.buyingWays.way1.point1"),
+        t("home.buyingWays.way1.point2"),
+        t("home.buyingWays.way1.point3"),
+      ],
+      href: "/cars",
+      cta: t("home.buyingWays.way1.cta"),
+    },
+    {
+      icon: GitMerge,
+      title: t("home.buyingWays.way2.title"),
+      description: t("home.buyingWays.way2.description"),
+      points: [
+        t("home.buyingWays.way2.point1"),
+        t("home.buyingWays.way2.point2"),
+        t("home.buyingWays.way2.point3"),
+      ],
+      href: "/exchange",
+      cta: t("home.buyingWays.way2.cta"),
+    },
+  ];
+
   return (
     <section className="py-20 sm:py-28">
       <Container className="flex flex-col gap-12">
         <SectionHeader
-          eyebrow="Два пути к сделке"
-          title="Два способа купить автомобиль"
-          description="Выбирайте привычную покупку по объявлению или доверьте подбор цены Автобирже."
+          eyebrow={t("home.buyingWays.eyebrow")}
+          title={t("home.buyingWays.title")}
+          description={t("home.buyingWays.description")}
         />
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

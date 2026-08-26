@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Pause, Play, RotateCcw } from "lucide-react";
 import { formatTenge } from "@/lib/format/money";
 import { MatchIndicator } from "@/components/exchange/MatchIndicator";
+import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { cn } from "@/lib/utils";
 
 const SELLER_START = 15_000_000;
@@ -61,6 +62,7 @@ const PADDING_X = 12;
 const PADDING_Y = 16;
 
 export function ExchangeSimulator() {
+  const { t } = useLanguage();
   const { days, matchDay } = useMemo(() => buildSeries(), []);
   const [currentDay, setCurrentDay] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -101,7 +103,7 @@ export function ExchangeSimulator() {
       <div className="flex flex-wrap items-start justify-between gap-6">
         <div className="flex flex-col gap-1">
           <span className="text-[13px] text-muted-foreground">
-            Цена продавца · день {point.day}
+            {t("exchange.simulator.sellerPriceDay")} {point.day}
           </span>
           <span className="text-2xl font-semibold tracking-tight text-destructive">
             {formatTenge(point.seller)}
@@ -109,7 +111,7 @@ export function ExchangeSimulator() {
         </div>
         <div className="flex flex-col gap-1 sm:items-end">
           <span className="text-[13px] text-muted-foreground">
-            Цена покупателя · день {point.day}
+            {t("exchange.simulator.buyerPriceDay")} {point.day}
           </span>
           <span className="text-2xl font-semibold tracking-tight text-success">
             {formatTenge(point.buyer)}
@@ -122,7 +124,7 @@ export function ExchangeSimulator() {
           viewBox={`0 0 ${CHART_WIDTH} ${CHART_HEIGHT}`}
           className="h-auto w-full"
           role="img"
-          aria-label="Изменение цены продавца и покупателя по дням"
+          aria-label={t("exchange.simulator.chartAriaLabel")}
         >
           <polyline
             points={sellerPoints}
@@ -196,7 +198,7 @@ export function ExchangeSimulator() {
             setCurrentDay(Number(event.target.value));
           }}
           className="h-2 w-full cursor-pointer appearance-none rounded-full bg-border accent-brand"
-          aria-label="День с момента размещения объявления и заявки"
+          aria-label={t("exchange.simulator.dayRangeAriaLabel")}
         />
 
         <div className="flex items-center justify-between gap-4">
@@ -204,7 +206,7 @@ export function ExchangeSimulator() {
             <button
               type="button"
               onClick={() => setPlaying((value) => !value)}
-              aria-label={playing ? "Остановить" : "Воспроизвести"}
+              aria-label={playing ? t("exchange.simulator.pause") : t("exchange.simulator.play")}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground transition-colors hover:border-foreground/30"
             >
               {playing ? <Pause size={16} /> : <Play size={16} />}
@@ -215,7 +217,7 @@ export function ExchangeSimulator() {
                 setPlaying(false);
                 setCurrentDay(0);
               }}
-              aria-label="Сбросить"
+              aria-label={t("exchange.simulator.reset")}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-border text-foreground transition-colors hover:border-foreground/30"
             >
               <RotateCcw size={16} />
@@ -229,8 +231,8 @@ export function ExchangeSimulator() {
             )}
           >
             {isMatched
-              ? "Match: цены сошлись, объявления заморожены"
-              : `Разница в цене: ${point.gapPercent.toFixed(1)}%`}
+              ? t("exchange.simulator.matched")
+              : `${t("exchange.simulator.gap")} ${point.gapPercent.toFixed(1)}%`}
           </span>
         </div>
       </div>
