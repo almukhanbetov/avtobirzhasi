@@ -232,10 +232,15 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
-          source: |
-            docker-compose.prod.yml
-            scripts/backup-db.sh
-            scripts/restore-db.sh
+          # A comma-separated single line, not a YAML multi-line block:
+          # this action's underlying tool (drone-scp) parses `source` as
+          # a urfave/cli StringSlice sourced from an env var, which splits
+          # on "," by default — NOT on newlines. A newline-joined value
+          # here is treated as one single (invalid) path/glob, matches no
+          # file at all, and drone-scp's `tar` refuses to create an empty
+          # archive. Confirmed by reproducing the exact failure with the
+          # real drone-scp v1.8.0 binary locally before fixing this line.
+          source: "docker-compose.prod.yml,scripts/backup-db.sh,scripts/restore-db.sh"
           target: ${{ secrets.VPS_PATH }}
           overwrite: true
 
