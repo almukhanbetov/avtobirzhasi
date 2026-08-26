@@ -9,11 +9,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// ModerationHandler exposes internal endpoints backing the admin
-// moderation queue (app/admin/moderation on the frontend). Mounted behind
-// middleware.LocalOnly() + middleware.Auth() + middleware.AdminOnly() — a
-// caller must be on the loopback interface AND hold a valid JWT for a
-// users.role='admin' account, not just one or the other.
+// ModerationHandler exposes the admin endpoints backing the admin
+// moderation queue (app/admin/moderation on the frontend). Mounted under
+// /api/admin, behind middleware.Auth() + middleware.AdminOnly() — a
+// caller must hold a valid JWT for a real users.role='admin' account,
+// checked fresh from the DB every request (see cmd/api/main.go). Not
+// LocalOnly-gated: unlike the daily-tick trigger, this is a real
+// browser-facing admin feature, and LocalOnly made it unreachable from
+// any actual admin session before Stage 10 — see
+// STAGE10_ADMIN_COMPLETION_REPORT.md.
 type ModerationHandler struct {
 	listings *repository.ListingRepository
 	users    *repository.UserRepository
@@ -24,9 +28,9 @@ func NewModerationHandler(listings *repository.ListingRepository, users *reposit
 	return &ModerationHandler{listings: listings, users: users}
 }
 
-// RegisterModerationRoutes wires the internal routes. Callers must mount
-// this under a router group protected by middleware.LocalOnly(),
-// middleware.Auth() and middleware.AdminOnly().
+// RegisterModerationRoutes wires the routes. Callers must mount this
+// under a router group protected by middleware.Auth() and
+// middleware.AdminOnly() (see cmd/api/main.go's /api/admin group).
 func RegisterModerationRoutes(router *gin.RouterGroup, h *ModerationHandler) {
 	router.GET("/listings/pending", h.ListPending)
 	router.POST("/listings/:id/approve", h.Approve)

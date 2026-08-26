@@ -3,9 +3,35 @@ package handlers
 import (
 	"net/http"
 	"regexp"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
+
+// adminPageSize is the fixed page size for every admin list endpoint —
+// small and constant on purpose (these are operator-facing monitoring
+// views, not a paginated product surface with user-tunable density).
+const adminPageSize = 20
+
+// parsePage reads the "page" query param, defaulting to (and floor-ing
+// invalid/non-positive values at) 1.
+func parsePage(c *gin.Context) int {
+	page, err := strconv.Atoi(c.Query("page"))
+	if err != nil || page < 1 {
+		return 1
+	}
+	return page
+}
+
+// totalPages computes the page count for an admin list's pagination
+// envelope, matching the public catalog's own convention (cars.go's List).
+func totalPages(total, pageSize int) int {
+	pages := (total + pageSize - 1) / pageSize
+	if pages < 1 {
+		return 1
+	}
+	return pages
+}
 
 var uuidPattern = regexp.MustCompile(`^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$`)
 

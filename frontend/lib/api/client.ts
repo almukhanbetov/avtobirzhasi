@@ -1,11 +1,6 @@
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080/api";
 
-// The backend also serves LocalOnly-protected internal/admin routes
-// outside the /api prefix (see internalFetch below) — derive their origin
-// from the same configured URL instead of hardcoding it a second time.
-const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
-
 // ApiError carries the backend's { error: { code, message } } envelope so
 // callers can branch on `code` (e.g. "FORBIDDEN") instead of parsing text,
 // while `message` is already the human-readable Russian string the backend
@@ -74,15 +69,4 @@ async function request<T>(
 // Client Components (token from the auth session).
 export function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   return request<T>(API_BASE_URL, path, options);
-}
-
-// internalFetch calls the backend's LocalOnly-protected /internal/*
-// routes (daily-tick trigger, moderation queue) — no /api prefix, no JWT.
-// Only reachable when the caller's TCP connection to the backend
-// originates from the backend's own machine (see middleware.LocalOnly),
-// which happens to include "this dev machine's browser talking to this
-// dev machine's backend" — not something that works across a real
-// frontend/backend deployment split.
-export function internalFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
-  return request<T>(API_ORIGIN, path, options);
 }

@@ -77,6 +77,11 @@ func main() {
 	jobsHandler := handlers.NewJobsHandler(exchangeService)
 	moderationHandler := handlers.NewModerationHandler(listingRepo, userRepo)
 	adminStatsHandler := handlers.NewAdminStatsHandler(adminRepo)
+	adminListingsHandler := handlers.NewAdminListingsHandler(listingRepo, userRepo)
+	adminRequestsHandler := handlers.NewAdminRequestsHandler(buyerRequestRepo, userRepo)
+	adminMatchesHandler := handlers.NewAdminMatchesHandler(matchRepo)
+	adminDepositsHandler := handlers.NewAdminDepositsHandler(depositRepo)
+	adminUsersHandler := handlers.NewAdminUsersHandler(userRepo)
 
 	router := gin.Default()
 	router.Use(middleware.CORS())
@@ -94,18 +99,39 @@ func main() {
 	handlers.RegisterNotificationsRoutes(api, notificationsHandler, cfg.JWTSecret)
 	handlers.RegisterDashboardRoutes(api, dashboardHandler, cfg.JWTSecret)
 
-	// LocalOnly stays as a network-layer belt-and-suspenders check, but per
-	// the functional audit it must not be the *only* proof of admin
-	// access — Auth + AdminOnly require an actual users.role='admin'
-	// account (see middleware/admin.go) on top of it.
+	// Admin-facing product features (moderation, stats, and the Stage 10
+	// monitoring views) live under /api/admin — reachable over the public
+	// internet like any other /api route, gated by Auth + AdminOnly (a
+	// real users.role='admin' account, checked fresh from the DB every
+	// request — see middleware/admin.go). This is deliberately NOT under
+	// LocalOnly: that network-position check makes sense for a genuinely
+	// internal debug trigger (see the /internal group below), but an
+	// admin's own browser calling these from a normal page load is not a
+	// "local" caller — mounting these under LocalOnly made them
+	// unreachable from any real browser session, confirmed live against
+	// production before this stage (see STAGE10_ADMIN_COMPLETION_REPORT.md).
+	adminAPI := router.Group("/api/admin",
+		middleware.Auth(cfg.JWTSecret),
+		middleware.AdminOnly(userRepo),
+	)
+	handlers.RegisterModerationRoutes(adminAPI, moderationHandler)
+	handlers.RegisterAdminStatsRoutes(adminAPI, adminStatsHandler)
+	handlers.RegisterAdminListingsRoutes(adminAPI, adminListingsHandler)
+	handlers.RegisterAdminRequestsRoutes(adminAPI, adminRequestsHandler)
+	handlers.RegisterAdminMatchesRoutes(adminAPI, adminMatchesHandler)
+	handlers.RegisterAdminDepositsRoutes(adminAPI, adminDepositsHandler)
+	handlers.RegisterAdminUsersRoutes(adminAPI, adminUsersHandler)
+
+	// /internal stays LocalOnly-gated (plus Auth + AdminOnly, belt and
+	// suspenders) — this is for the one genuinely internal, non-UI-facing
+	// endpoint: the manual daily-tick trigger, which must never be
+	// reachable from the public internet at all, by design.
 	internal := router.Group("/internal",
 		middleware.LocalOnly(),
 		middleware.Auth(cfg.JWTSecret),
 		middleware.AdminOnly(userRepo),
 	)
 	handlers.RegisterJobsRoutes(internal, jobsHandler)
-	handlers.RegisterModerationRoutes(internal, moderationHandler)
-	handlers.RegisterAdminStatsRoutes(internal, adminStatsHandler)
 
 	go runDailyTickScheduler(ctx, exchangeService)
 

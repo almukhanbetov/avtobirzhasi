@@ -312,6 +312,53 @@ func (r *ListingRepository) ListByUser(ctx context.Context, userID string) ([]mo
 	return listings, nil
 }
 
+// ListAll returns every listing regardless of owner, optionally filtered
+// by status, newest first — backs the admin listings view. Unlike
+// ListByUser, this crosses ownership boundaries, so callers must only
+// ever be admin-gated handlers.
+func (r *ListingRepository) ListAll(ctx context.Context, status string, page, pageSize int) ([]models.Listing, int, error) {
+	where := ""
+	args := []any{}
+	if status != "" {
+		where = "WHERE status = $1"
+		args = append(args, status)
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT count(*) FROM listings %s", where)
+	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	args = append(args, pageSize, (page-1)*pageSize)
+	query := fmt.Sprintf(
+		"SELECT %s FROM listings %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
+		listingColumns, where, len(args)-1, len(args),
+	)
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var listings []models.Listing
+	for rows.Next() {
+		l, err := scanListing(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		listings = append(listings, l)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	if err := r.attachImages(ctx, listings); err != nil {
+		return nil, 0, err
+	}
+	return listings, total, nil
+}
+
 // ListPendingModeration returns every listing awaiting moderation, across
 // all sellers, oldest first — the admin queue backing
 // GET /internal/listings/pending.

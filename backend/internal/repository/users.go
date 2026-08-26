@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"avtobirzhasi/backend/internal/models"
 
@@ -54,6 +55,47 @@ func (r *UserRepository) FindByID(ctx context.Context, id string) (*models.User,
 		FROM users WHERE id = $1
 	`
 	return r.scanUser(r.db.QueryRow(ctx, query, id))
+}
+
+// ListAll returns every user, optionally filtered by a case-insensitive
+// substring match on name or phone, newest first, plus the total matching
+// row count — backs the admin users lookup view (support needing to find
+// an account by phone/name; it is deliberately read-only, see
+// STAGE10_ADMIN_COMPLETION_REPORT.md for why role-promotion stays a
+// manual SQL step rather than a UI action this stage).
+func (r *UserRepository) ListAll(ctx context.Context, search string, page, pageSize int) ([]models.User, int, error) {
+	where := ""
+	args := []any{}
+	if search != "" {
+		where = "WHERE name ILIKE $1 OR phone ILIKE $1"
+		args = append(args, "%"+search+"%")
+	}
+
+	var total int
+	countQuery := "SELECT count(*) FROM users " + where
+	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	args = append(args, pageSize, (page-1)*pageSize)
+	query := "SELECT id, name, phone, password_hash, email, region, account_type, role, rating, reviews_count, created_at, updated_at FROM users " +
+		where + fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", len(args)-1, len(args))
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var out []models.User
+	for rows.Next() {
+		u, err := r.scanUser(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, *u)
+	}
+	return out, total, rows.Err()
 }
 
 func (r *UserRepository) scanUser(row pgx.Row) (*models.User, error) {

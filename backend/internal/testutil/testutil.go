@@ -125,6 +125,22 @@ func InsertUser(t *testing.T, pool *pgxpool.Pool, phone string) string {
 	return id
 }
 
+// InsertAdminUser is InsertUser with role='admin' — for tests exercising
+// the /api/admin routes' AdminOnly gate.
+func InsertAdminUser(t *testing.T, pool *pgxpool.Pool, phone string) string {
+	t.Helper()
+	var id string
+	err := pool.QueryRow(context.Background(), `
+		INSERT INTO users (name, phone, password_hash, account_type, role)
+		VALUES ($1, $2, 'x', 'private', 'admin')
+		RETURNING id
+	`, "Test Admin", phone).Scan(&id)
+	if err != nil {
+		t.Fatalf("insert test admin user: %v", err)
+	}
+	return id
+}
+
 // ListingFixture describes the listing fields tests actually vary; every
 // other required column gets a fixed, valid default.
 type ListingFixture struct {

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AdminComingSoon } from "@/components/admin/AdminComingSoon";
+import { AdminUsersContent } from "@/components/admin/AdminUsersContent";
 
 export const metadata: Metadata = {
   title: "Пользователи — Админка",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminUsersPage() {
-  return <AdminComingSoon titleKey="admin.users.title" />;
+  return <AdminUsersContent />;
 }

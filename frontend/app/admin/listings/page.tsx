@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AdminComingSoon } from "@/components/admin/AdminComingSoon";
+import { AdminListingsContent } from "@/components/admin/AdminListingsContent";
 
 export const metadata: Metadata = {
   title: "Все объявления — Админка",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminListingsPage() {
-  return <AdminComingSoon titleKey="admin.listings.title" />;
+  return <AdminListingsContent />;
 }

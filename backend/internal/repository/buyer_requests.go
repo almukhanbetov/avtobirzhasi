@@ -83,6 +83,46 @@ func (r *BuyerRequestRepository) ListByUser(ctx context.Context, userID string) 
 	return out, rows.Err()
 }
 
+// ListAll returns every buyer request regardless of owner, optionally
+// filtered by status, newest first — backs the admin requests view.
+// Unlike ListByUser, this crosses ownership boundaries, so callers must
+// only ever be admin-gated handlers.
+func (r *BuyerRequestRepository) ListAll(ctx context.Context, status string, page, pageSize int) ([]models.BuyerRequest, int, error) {
+	where := ""
+	args := []any{}
+	if status != "" {
+		where = "WHERE status = $1"
+		args = append(args, status)
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT count(*) FROM buyer_requests %s", where)
+	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	args = append(args, pageSize, (page-1)*pageSize)
+	query := fmt.Sprintf(
+		"SELECT %s FROM buyer_requests %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
+		buyerRequestColumns, where, len(args)-1, len(args),
+	)
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var out []models.BuyerRequest
+	for rows.Next() {
+		b, err := scanBuyerRequest(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, b)
+	}
+	return out, total, rows.Err()
+}
+
 // SetStatus transitions a buyer request's status (e.g. to "archived" for a
 // user-initiated cancel — see ListingRepository.SetStatus, same pattern).
 func (r *BuyerRequestRepository) SetStatus(ctx context.Context, id, status string) error {

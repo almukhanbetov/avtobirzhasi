@@ -87,6 +87,51 @@ func (r *MatchRepository) ListForUser(ctx context.Context, userID string) ([]Mat
 	return out, nil
 }
 
+// ListAll returns every match regardless of party, optionally filtered by
+// status, newest first, plus the total matching row count — backs the
+// admin matches monitoring view.
+func (r *MatchRepository) ListAll(ctx context.Context, status string, page, pageSize int) ([]MatchRow, int, error) {
+	where := ""
+	args := []any{}
+	if status != "" {
+		where = "WHERE m.status = $1"
+		args = append(args, status)
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT count(*) FROM matches m %s", where)
+	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	args = append(args, pageSize, (page-1)*pageSize)
+	query := fmt.Sprintf(`
+		SELECT %s
+		FROM matches m
+		JOIN listings l ON l.id = m.listing_id
+		JOIN buyer_requests br ON br.id = m.buyer_request_id
+		%s
+		ORDER BY m.created_at DESC
+		LIMIT $%d OFFSET $%d
+	`, matchColumns, where, len(args)-1, len(args))
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var out []MatchRow
+	for rows.Next() {
+		m, err := scanMatch(rows)
+		if err != nil {
+			return nil, 0, err
+		}
+		out = append(out, m)
+	}
+	return out, total, rows.Err()
+}
+
 // GetByID looks up a single match by id. Returns ErrNotFound if no such
 // match exists.
 func (r *MatchRepository) GetByID(ctx context.Context, id string) (MatchRow, error) {

@@ -400,10 +400,46 @@ export const translations = {
 
     "admin.sidebar.title": "Админка",
     "admin.listings.title": "Все объявления",
-    "admin.reviews.title": "Отзывы",
     "admin.users.title": "Пользователи",
-    "admin.settings.title": "Настройки",
-    "admin.comingSoon": "Раздел в разработке — появится на следующем этапе.",
+
+    "admin.filter.status": "Статус",
+    "admin.filter.anyStatus": "Любой статус",
+    "admin.pagination.prev": "Назад",
+    "admin.pagination.next": "Вперёд",
+    "admin.pagination.pageLabel": "Стр.",
+
+    "admin.listings.subtitle": "Все объявления на платформе, независимо от продавца.",
+    "admin.listings.loadErrorTitle": "Не удалось загрузить объявления",
+    "admin.listings.emptyTitle": "Объявлений не найдено",
+    "admin.listings.emptyDescription": "Попробуйте выбрать другой статус.",
+    "admin.listings.archive": "Удалить",
+    "admin.listings.archiving": "Удаляем…",
+    "admin.listings.archiveConfirm": "Удалить это объявление? Действие нельзя отменить.",
+
+    "admin.requests.subtitle": "Все заявки на покупку, независимо от покупателя.",
+    "admin.requests.loadErrorTitle": "Не удалось загрузить заявки",
+    "admin.requests.emptyTitle": "Заявок не найдено",
+    "admin.requests.emptyDescription": "Попробуйте выбрать другой статус.",
+    "admin.requests.archiveConfirm": "Удалить эту заявку? Действие нельзя отменить.",
+
+    "admin.matches.subtitle": "Все сделки на платформе.",
+    "admin.matches.loadErrorTitle": "Не удалось загрузить сделки",
+    "admin.matches.emptyTitle": "Сделок не найдено",
+    "admin.matches.emptyDescription": "Попробуйте выбрать другой статус.",
+    "admin.matches.deposit": "Депозит",
+    "admin.matches.deposits": "Депозиты (продавец/покупатель)",
+
+    "admin.deposits.subtitle": "Все депозиты на платформе.",
+    "admin.deposits.loadErrorTitle": "Не удалось загрузить депозиты",
+    "admin.deposits.emptyTitle": "Депозитов не найдено",
+    "admin.deposits.emptyDescription": "Попробуйте выбрать другой статус.",
+
+    "admin.users.subtitle": "Поиск пользователей по имени или телефону.",
+    "admin.users.loadErrorTitle": "Не удалось загрузить пользователей",
+    "admin.users.emptyTitle": "Пользователи не найдены",
+    "admin.users.emptyDescription": "Попробуйте изменить запрос.",
+    "admin.users.searchLabel": "Поиск",
+    "admin.users.searchPlaceholder": "Имя или телефон",
 
     "admin.stats.subtitle": "Общая статистика по AVTOBIRZHASI.KZ.",
     "admin.stats.loadError":
@@ -425,8 +461,7 @@ export const translations = {
     "admin.stats.deposits.refunded": "Возвращены",
 
     "admin.moderation.title": "Модерация объявлений",
-    "admin.moderation.subtitle":
-      "Внутренний инструмент — доступен только с этой же машины, где запущен бэкенд (см. middleware.LocalOnly на сервере).",
+    "admin.moderation.subtitle": "Новые объявления, ожидающие проверки перед публикацией.",
     "admin.moderation.genericError": "Не удалось обработать объявление",
     "admin.moderation.loadErrorTitle": "Не удалось загрузить очередь модерации",
     "admin.moderation.rejecting": "Отклоняем…",
@@ -899,10 +934,46 @@ export const translations = {
 
     "admin.sidebar.title": "Әкімшілік панелі",
     "admin.listings.title": "Барлық хабарландырулар",
-    "admin.reviews.title": "Пікірлер",
     "admin.users.title": "Пайдаланушылар",
-    "admin.settings.title": "Баптаулар",
-    "admin.comingSoon": "Бөлім әзірленуде — келесі кезеңде қосылады.",
+
+    "admin.filter.status": "Мәртебе",
+    "admin.filter.anyStatus": "Кез келген мәртебе",
+    "admin.pagination.prev": "Артқа",
+    "admin.pagination.next": "Алға",
+    "admin.pagination.pageLabel": "Бет",
+
+    "admin.listings.subtitle": "Платформадағы барлық хабарландырулар, сатушысына қарамастан.",
+    "admin.listings.loadErrorTitle": "Хабарландыруларды жүктеу мүмкін болмады",
+    "admin.listings.emptyTitle": "Хабарландырулар табылмады",
+    "admin.listings.emptyDescription": "Басқа мәртебені таңдап көріңіз.",
+    "admin.listings.archive": "Жою",
+    "admin.listings.archiving": "Жойылуда…",
+    "admin.listings.archiveConfirm": "Бұл хабарландыруды жою керек пе? Әрекетті болдырмау мүмкін емес.",
+
+    "admin.requests.subtitle": "Платформадағы барлық сатып алу өтінімдері, сатып алушысына қарамастан.",
+    "admin.requests.loadErrorTitle": "Өтінімдерді жүктеу мүмкін болмады",
+    "admin.requests.emptyTitle": "Өтінімдер табылмады",
+    "admin.requests.emptyDescription": "Басқа мәртебені таңдап көріңіз.",
+    "admin.requests.archiveConfirm": "Бұл өтінімді жою керек пе? Әрекетті болдырмау мүмкін емес.",
+
+    "admin.matches.subtitle": "Платформадағы барлық мәмілелер.",
+    "admin.matches.loadErrorTitle": "Мәмілелерді жүктеу мүмкін болмады",
+    "admin.matches.emptyTitle": "Мәмілелер табылмады",
+    "admin.matches.emptyDescription": "Басқа мәртебені таңдап көріңіз.",
+    "admin.matches.deposit": "Депозит",
+    "admin.matches.deposits": "Депозиттер (сатушы/сатып алушы)",
+
+    "admin.deposits.subtitle": "Платформадағы барлық депозиттер.",
+    "admin.deposits.loadErrorTitle": "Депозиттерді жүктеу мүмкін болмады",
+    "admin.deposits.emptyTitle": "Депозиттер табылмады",
+    "admin.deposits.emptyDescription": "Басқа мәртебені таңдап көріңіз.",
+
+    "admin.users.subtitle": "Пайдаланушыларды аты немесе телефоны бойынша іздеу.",
+    "admin.users.loadErrorTitle": "Пайдаланушыларды жүктеу мүмкін болмады",
+    "admin.users.emptyTitle": "Пайдаланушылар табылмады",
+    "admin.users.emptyDescription": "Сұрауды өзгертіп көріңіз.",
+    "admin.users.searchLabel": "Іздеу",
+    "admin.users.searchPlaceholder": "Аты немесе телефоны",
 
     "admin.stats.subtitle": "AVTOBIRZHASI.KZ бойынша жалпы статистика.",
     "admin.stats.loadError":
@@ -924,8 +995,7 @@ export const translations = {
     "admin.stats.deposits.refunded": "Қайтарылды",
 
     "admin.moderation.title": "Хабарландыруларды модерациялау",
-    "admin.moderation.subtitle":
-      "Ішкі құрал — тек бэкенд орналасқан осы машинадан қолжетімді (серверде middleware.LocalOnly қараңыз).",
+    "admin.moderation.subtitle": "Жариялауға дейін тексеруді күтетін жаңа хабарландырулар.",
     "admin.moderation.genericError": "Хабарландыруды өңдеу мүмкін болмады",
     "admin.moderation.loadErrorTitle": "Модерация кезегін жүктеу мүмкін болмады",
     "admin.moderation.rejecting": "Қабылдамаудамыз…",

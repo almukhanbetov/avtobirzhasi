@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"time"
 )
 
@@ -64,4 +65,46 @@ func (r *DepositRepository) ListForUser(ctx context.Context, userID string) ([]D
 		return nil, err
 	}
 	return out, nil
+}
+
+// ListAll returns every deposit regardless of owner, optionally filtered
+// by status, newest first, plus the total matching row count — backs the
+// admin deposits monitoring view.
+func (r *DepositRepository) ListAll(ctx context.Context, status string, page, pageSize int) ([]DepositRow, int, error) {
+	where := ""
+	args := []any{}
+	if status != "" {
+		where = "WHERE status = $1"
+		args = append(args, status)
+	}
+
+	var total int
+	countQuery := fmt.Sprintf("SELECT count(*) FROM deposits %s", where)
+	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+		return nil, 0, err
+	}
+
+	args = append(args, pageSize, (page-1)*pageSize)
+	query := fmt.Sprintf(
+		"SELECT %s FROM deposits %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d",
+		depositColumns, where, len(args)-1, len(args),
+	)
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var out []DepositRow
+	for rows.Next() {
+		var d DepositRow
+		if err := rows.Scan(
+			&d.ID, &d.MatchID, &d.UserID, &d.Role, &d.Amount, &d.Status, &d.Provider,
+			&d.CreatedAt, &d.PaidAt, &d.RefundedAt,
+		); err != nil {
+			return nil, 0, err
+		}
+		out = append(out, d)
+	}
+	return out, total, rows.Err()
 }

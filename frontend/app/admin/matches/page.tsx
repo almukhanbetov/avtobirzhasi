@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { AdminComingSoon } from "@/components/admin/AdminComingSoon";
+import { AdminMatchesContent } from "@/components/admin/AdminMatchesContent";
 
 export const metadata: Metadata = {
   title: "Matches — Админка",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AdminMatchesPage() {
-  return <AdminComingSoon titleKey="dashboard.nav.matches" />;
+  return <AdminMatchesContent />;
 }

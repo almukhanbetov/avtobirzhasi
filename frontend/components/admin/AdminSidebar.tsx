@@ -3,14 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Bell,
   ClipboardCheck,
   FileText,
   Gauge,
   GitMerge,
   LayoutGrid,
-  Settings,
-  Star,
   Users,
   Wallet,
 } from "lucide-react";
@@ -33,9 +30,6 @@ export function AdminSidebar() {
     { href: "/admin/requests", label: t("dashboard.nav.requests"), icon: FileText },
     { href: "/admin/matches", label: t("dashboard.nav.matches"), icon: GitMerge },
     { href: "/admin/deposits", label: t("dashboard.nav.deposits"), icon: Wallet },
-    { href: "/admin/notifications", label: t("dashboard.nav.notifications"), icon: Bell },
-    { href: "/admin/reviews", label: t("admin.reviews.title"), icon: Star },
-    { href: "/admin/settings", label: t("admin.settings.title"), icon: Settings },
   ];
 
   return (
