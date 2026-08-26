@@ -16,13 +16,18 @@ avtobirzhasi.kz, www.avtobirzhasi.kz {
 }
 
 api.avtobirzhasi.kz {
-	# backend/internal/middleware/localonly.go's LocalOnly() authorizes
-	# purely by TCP peer address (127.0.0.1 only) — which is exactly what
-	# Caddy itself connects from when it reverse-proxies to the backend on
-	# the same host. Left unblocked here, EVERY visitor on the internet
-	# would pass LocalOnly and reach the moderation/admin-stats/daily-tick
-	# endpoints at https://api.avtobirzhasi.kz/internal/*. This must stay
-	# in place — don't remove it when merging.
+	# Defense-in-depth, not the only guard: backend/internal/middleware/
+	# localonly.go's LocalOnly() independently rejects any request whose
+	# TCP peer isn't 127.0.0.1/::1, and Stage 8C (2026-08-26) directly
+	# confirmed on production that /internal/* correctly returns 401/403
+	# for unauthorized callers regardless of this block's own live-merge
+	# state — see STAGE8B_REAL_PRODUCTION_VERIFICATION_REPORT.md's Stage
+	# 8C section. This block should still stay in place (stopping the
+	# request at the edge is strictly better than relying on the backend
+	# alone), but its absence would not, by itself, expose
+	# moderation/admin-stats/daily-tick to the public internet — don't
+	# treat this Caddy rule as the sole safeguard when reasoning about
+	# this path's security.
 	handle /internal/* {
 		respond 404
 	}

@@ -211,6 +211,34 @@ jobs:
       group: avtobirzhasi-production-deploy
       cancel-in-progress: false
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Stage 8D: "Deploy over SSH" below only ever pulls/runs Docker
+      # IMAGES — it has no way to pick up changes to files that live in
+      # the repo but not inside an image (docker-compose.prod.yml itself,
+      # the backup scripts). Without this step, Stage 8's compose
+      # healthchecks and backup scripts would never reach the VPS no
+      # matter how many times this workflow ran — confirmed as a real,
+      # live gap during Stage 8C's VPS verification (scripts/backup-db.sh
+      # was found completely absent on the server). scp, not `git pull`:
+      # $VPS_PATH is not assumed to be a git checkout, and this syncs
+      # exactly the 3 files that matter, nothing else (no .env, no
+      # secrets, no source code).
+      - name: Sync infrastructure files to VPS
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          port: ${{ secrets.VPS_PORT }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: |
+            docker-compose.prod.yml
+            scripts/backup-db.sh
+            scripts/restore-db.sh
+          target: ${{ secrets.VPS_PATH }}
+          overwrite: true
+
       - name: Deploy over SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
@@ -221,6 +249,9 @@ jobs:
           script: |
             set -e
             cd "${{ secrets.VPS_PATH }}"
+
+            chmod +x scripts/backup-db.sh scripts/restore-db.sh
+
             docker compose -f docker-compose.prod.yml pull
             # Migrations run once, from the freshly-pulled backend image,
             # before the new backend container is started — `set -e`
@@ -233,3 +264,28 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d
             docker image prune -f
             docker compose -f docker-compose.prod.yml ps
+
+            # --- Stage 8D: daily backup schedule ---
+            # Installed/refreshed on every deploy via the current user's
+            # crontab (not a systemd timer — this VPS user's sudo/systemd
+            # privileges are unknown from CI, and per-user crontab needs
+            # none, matching the same non-root user docker compose already
+            # runs as). Idempotent: only the single line carrying this
+            # exact marker comment is ever removed before being re-added,
+            # so re-deploying never duplicates it and no unrelated cron
+            # entry this VPS user already has is ever touched.
+            BACKUP_CRON_MARKER="avtobirzhasi-backup (managed by .github/workflows/deploy.yml)"
+            BACKUP_CRON_LINE="0 3 * * * cd ${{ secrets.VPS_PATH }} && PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin BACKUP_DIR=${{ secrets.VPS_PATH }}/backups RETENTION_DAYS=14 ./scripts/backup-db.sh >> ${{ secrets.VPS_PATH }}/backups/backup.log 2>&1 # $BACKUP_CRON_MARKER"
+            ( crontab -l 2>/dev/null | grep -vF "$BACKUP_CRON_MARKER" ; echo "$BACKUP_CRON_LINE" ) | crontab -
+            crontab -l | grep -qF "$BACKUP_CRON_MARKER"
+
+            # --- Stage 8D: prove the backup mechanism actually works on
+            # THIS deploy, not just that it was installed for later ---
+            mkdir -p backups
+            BACKUP_DIR=./backups RETENTION_DAYS=14 ./scripts/backup-db.sh
+            LATEST_BACKUP=$(ls -t ./backups/avtobirzhasi_*.sql.gz 2>/dev/null | head -1)
+            if [ -z "$LATEST_BACKUP" ] || [ ! -s "$LATEST_BACKUP" ]; then
+              echo "ERROR: no non-empty backup file found after backup-db.sh ran" >&2
+              exit 1
+            fi
+            echo "Backup verified: $LATEST_BACKUP ($(du -h "$LATEST_BACKUP" | cut -f1))"
