@@ -6,7 +6,7 @@ import type {
 } from "@/types/dashboard";
 import type { Lang } from "@/lib/i18n/translations";
 
-type Variant = "brand" | "neutral" | "success" | "warning";
+type Variant = "brand" | "neutral" | "success" | "warning" | "destructive";
 
 export const listingStatusLabels: Record<
   Lang,
@@ -53,11 +53,13 @@ export const depositStatusLabels: Record<
     pending: { label: "Ожидает оплаты", variant: "warning" },
     paid: { label: "Оплачен", variant: "success" },
     refunded: { label: "Возвращён", variant: "neutral" },
+    failed: { label: "Платёж не прошёл", variant: "destructive" },
   },
   kz: {
     pending: { label: "Төлем күтілуде", variant: "warning" },
     paid: { label: "Төленді", variant: "success" },
     refunded: { label: "Қайтарылды", variant: "neutral" },
+    failed: { label: "Төлем өтпеді", variant: "destructive" },
   },
 };
 

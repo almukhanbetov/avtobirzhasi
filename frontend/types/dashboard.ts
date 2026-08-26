@@ -10,7 +10,7 @@ export type MatchStatus =
   | "expired"
   | "cancelled";
 
-export type DepositStatus = "pending" | "paid" | "refunded";
+export type DepositStatus = "pending" | "paid" | "refunded" | "failed";
 
 export type NotificationType =
   | "match_found"

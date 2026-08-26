@@ -22,19 +22,21 @@ func NewDepositRepository(r *Repository) *DepositRepository {
 
 // DepositRow is a deposits row.
 type DepositRow struct {
-	ID         string
-	MatchID    string
-	UserID     string
-	Role       string
-	Amount     int64
-	Status     string
-	Provider   string
-	CreatedAt  time.Time
-	PaidAt     *time.Time
-	RefundedAt *time.Time
+	ID                string
+	MatchID           string
+	UserID            string
+	Role              string
+	Amount            int64
+	Status            string
+	Provider          string
+	ProviderPaymentID string
+	CreatedAt         time.Time
+	PaidAt            *time.Time
+	RefundedAt        *time.Time
+	FailedAt          *time.Time
 }
 
-const depositColumns = `id, match_id, user_id, role, amount, status, provider, created_at, paid_at, refunded_at`
+const depositColumns = `id, match_id, user_id, role, amount, status, provider, coalesce(provider_payment_id, ''), created_at, paid_at, refunded_at, failed_at`
 
 // ListForUser returns every deposit ever owed by a user (any status), most
 // recently created first.
@@ -54,8 +56,8 @@ func (r *DepositRepository) ListForUser(ctx context.Context, userID string) ([]D
 	for rows.Next() {
 		var d DepositRow
 		if err := rows.Scan(
-			&d.ID, &d.MatchID, &d.UserID, &d.Role, &d.Amount, &d.Status, &d.Provider,
-			&d.CreatedAt, &d.PaidAt, &d.RefundedAt,
+			&d.ID, &d.MatchID, &d.UserID, &d.Role, &d.Amount, &d.Status, &d.Provider, &d.ProviderPaymentID,
+			&d.CreatedAt, &d.PaidAt, &d.RefundedAt, &d.FailedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -99,8 +101,8 @@ func (r *DepositRepository) ListAll(ctx context.Context, status string, page, pa
 	for rows.Next() {
 		var d DepositRow
 		if err := rows.Scan(
-			&d.ID, &d.MatchID, &d.UserID, &d.Role, &d.Amount, &d.Status, &d.Provider,
-			&d.CreatedAt, &d.PaidAt, &d.RefundedAt,
+			&d.ID, &d.MatchID, &d.UserID, &d.Role, &d.Amount, &d.Status, &d.Provider, &d.ProviderPaymentID,
+			&d.CreatedAt, &d.PaidAt, &d.RefundedAt, &d.FailedAt,
 		); err != nil {
 			return nil, 0, err
 		}

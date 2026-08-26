@@ -352,11 +352,21 @@ export const translations = {
       "Депозит 1% подтверждает серьёзность намерений и открывает контакты после Match.",
     "dashboard.deposits.mockNotice":
       "Тестовый режим: оплата депозита здесь ничего не списывает по-настоящему — это симуляция для проверки сценария Auto Exchange, реальный платёжный шлюз ещё не подключён.",
+    "dashboard.deposits.realNotice":
+      "Оплата депозита обрабатывается платёжным провайдером FreedomPay — вы будете перенаправлены на защищённую страницу оплаты.",
     "dashboard.deposits.payError": "Не удалось внести депозит",
     "dashboard.deposits.loadErrorTitle": "Не удалось загрузить депозиты",
     "dashboard.deposits.emptyTitle": "Депозитов пока нет.",
     "dashboard.deposits.emptyDescription":
       "Депозит появится здесь, как только по вашему объявлению или заявке будет найден Match.",
+    "dashboard.deposits.return.verifying": "Проверяем статус оплаты…",
+    "dashboard.deposits.return.verifyingDescription":
+      "Это займёт несколько секунд. Не закрывайте страницу.",
+    "dashboard.deposits.return.success": "Оплата прошла успешно",
+    "dashboard.deposits.return.failed": "Оплата не прошла",
+    "dashboard.deposits.return.timeout":
+      "Не удалось подтвердить оплату сразу. Проверьте статус в разделе «Депозиты» чуть позже.",
+    "dashboard.deposits.return.backLink": "Вернуться к депозитам",
 
     "dashboard.listings.subtitle": "Объявления о продаже, которые вы разместили.",
     "dashboard.listings.loadErrorTitle": "Не удалось загрузить объявления",
@@ -885,11 +895,21 @@ export const translations = {
       "1% депозит ниеттің шындығын растайды және Match-тан кейін байланыстарды ашады.",
     "dashboard.deposits.mockNotice":
       "Тестілік режим: мұндағы депозит төлемі нақты ақша есептен шығармайды — бұл Auto Exchange сценарийін тексеруге арналған симуляция, нақты төлем шлюзі әлі қосылмаған.",
+    "dashboard.deposits.realNotice":
+      "Депозит төлемі FreedomPay төлем провайдері арқылы өңделеді — сіз қорғалған төлем бетіне бағытталасыз.",
     "dashboard.deposits.payError": "Депозитті енгізу мүмкін болмады",
     "dashboard.deposits.loadErrorTitle": "Депозиттерді жүктеу мүмкін болмады",
     "dashboard.deposits.emptyTitle": "Депозиттер әзірше жоқ.",
     "dashboard.deposits.emptyDescription":
       "Депозит хабарландыруыңыз немесе өтініміңіз бойынша Match табылғанда осында пайда болады.",
+    "dashboard.deposits.return.verifying": "Төлем мәртебесін тексеріп жатырмыз…",
+    "dashboard.deposits.return.verifyingDescription":
+      "Бұл бірнеше секунд алады. Бетті жаппаңыз.",
+    "dashboard.deposits.return.success": "Төлем сәтті өтті",
+    "dashboard.deposits.return.failed": "Төлем өтпеді",
+    "dashboard.deposits.return.timeout":
+      "Төлемді дереу растау мүмкін болмады. «Депозиттер» бөлімінен мәртебені кейінірек тексеріңіз.",
+    "dashboard.deposits.return.backLink": "Депозиттерге оралу",
 
     "dashboard.listings.subtitle": "Сіз орналастырған сату хабарландырулары.",
     "dashboard.listings.loadErrorTitle": "Хабарландыруларды жүктеу мүмкін болмады",

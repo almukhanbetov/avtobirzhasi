@@ -58,11 +58,9 @@ func main() {
 	adminRepo := repository.NewAdminRepository(pool)
 
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
-	exchangeService := service.NewExchangeService(pool)
-	// MockPaymentProvider is the only PaymentProvider implemented today —
-	// see service/payment.go's doc comment. Swapping in a real gateway
-	// later only changes this one line.
-	depositService := service.NewDepositService(pool, service.NewMockPaymentProvider())
+	paymentProvider := newPaymentProvider(cfg)
+	exchangeService := service.NewExchangeService(pool, paymentProvider)
+	depositService := service.NewDepositService(pool, paymentProvider)
 
 	authHandler := handlers.NewAuthHandler(authService)
 	carsHandler := handlers.NewCarsHandler(listingRepo)
@@ -82,6 +80,7 @@ func main() {
 	adminMatchesHandler := handlers.NewAdminMatchesHandler(matchRepo)
 	adminDepositsHandler := handlers.NewAdminDepositsHandler(depositRepo)
 	adminUsersHandler := handlers.NewAdminUsersHandler(userRepo)
+	webhooksHandler := handlers.NewWebhooksHandler(paymentProvider, depositService)
 
 	router := gin.Default()
 	router.Use(middleware.CORS())
@@ -98,6 +97,9 @@ func main() {
 	handlers.RegisterDepositsRoutes(api, depositsHandler, cfg.JWTSecret)
 	handlers.RegisterNotificationsRoutes(api, notificationsHandler, cfg.JWTSecret)
 	handlers.RegisterDashboardRoutes(api, dashboardHandler, cfg.JWTSecret)
+	// Public — a payment gateway cannot present a JWT. Authenticity comes
+	// entirely from PaymentProvider.VerifyWebhook's signature check.
+	handlers.RegisterWebhooksRoutes(api, webhooksHandler)
 
 	// Admin-facing product features (moderation, stats, and the Stage 10
 	// monitoring views) live under /api/admin — reachable over the public
@@ -202,4 +204,27 @@ func runTickSafely(ctx context.Context, exchange *service.ExchangeService) {
 		return
 	}
 	log.Printf("scheduled daily tick: %+v", result)
+}
+
+// newPaymentProvider picks the real FreedomPay provider only when both
+// FREEDOMPAY_MERCHANT_ID and FREEDOMPAY_SECRET_KEY are set; otherwise it
+// falls back to MockPaymentProvider so a missing/incomplete production
+// credential set fails safe (payment stays a disclosed simulation) rather
+// than starting the server with a half-configured real gateway. See
+// STAGE11_REAL_PAYMENT_REPORT.md's Production Enablement Requirements.
+func newPaymentProvider(cfg *config.Config) service.PaymentProvider {
+	if cfg.FreedomPayMerchantID == "" || cfg.FreedomPaySecretKey == "" {
+		log.Println("payment provider: no FreedomPay credentials configured — using MockPaymentProvider (no real money moves)")
+		return service.NewMockPaymentProvider()
+	}
+	log.Println("payment provider: FreedomPay configured — real payments are LIVE unless FREEDOMPAY_TESTING_MODE=1")
+	return service.NewFreedomPayProvider(service.FreedomPayConfig{
+		MerchantID:  cfg.FreedomPayMerchantID,
+		SecretKey:   cfg.FreedomPaySecretKey,
+		TestingMode: cfg.FreedomPayTestingMode,
+		ResultURL:   cfg.FreedomPayResultURL,
+		SuccessURL:  cfg.FreedomPaySuccessURL,
+		FailureURL:  cfg.FreedomPayFailureURL,
+		BaseURL:     cfg.FreedomPayBaseURL,
+	})
 }

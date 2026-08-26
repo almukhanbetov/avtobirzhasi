@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 
-type Variant = "brand" | "neutral" | "success" | "warning" | "outline";
+type Variant = "brand" | "neutral" | "success" | "warning" | "outline" | "destructive";
 
 const variantClasses: Record<Variant, string> = {
   brand: "bg-brand text-white",
@@ -8,6 +8,7 @@ const variantClasses: Record<Variant, string> = {
   success: "bg-success-light text-success",
   warning: "bg-warning-light text-warning",
   outline: "border border-border bg-surface text-muted-foreground",
+  destructive: "bg-destructive-light text-destructive",
 };
 
 export function Badge({

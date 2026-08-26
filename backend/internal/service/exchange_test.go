@@ -33,7 +33,7 @@ func TestFormatTenge(t *testing.T) {
 func TestExchangeService_SelfMatchIsNeverCreated(t *testing.T) {
 	pool := testutil.SetupDB(t)
 	ctx := context.Background()
-	svc := NewExchangeService(pool)
+	svc := NewExchangeService(pool, NewMockPaymentProvider())
 
 	userID := testutil.InsertUser(t, pool, "+77020000001")
 	listingID := testutil.InsertListing(t, pool, testutil.ListingFixture{
@@ -76,7 +76,7 @@ func TestExchangeService_SelfMatchIsNeverCreated(t *testing.T) {
 func TestExchangeService_GenuineMatchIsCreated(t *testing.T) {
 	pool := testutil.SetupDB(t)
 	ctx := context.Background()
-	svc := NewExchangeService(pool)
+	svc := NewExchangeService(pool, NewMockPaymentProvider())
 
 	sellerID := testutil.InsertUser(t, pool, "+77020000002")
 	buyerID := testutil.InsertUser(t, pool, "+77020000003")
@@ -145,7 +145,7 @@ func TestExchangeService_GenuineMatchIsCreated(t *testing.T) {
 func TestExchangeService_DecayAndGrowApplyDailyRate(t *testing.T) {
 	pool := testutil.SetupDB(t)
 	ctx := context.Background()
-	svc := NewExchangeService(pool)
+	svc := NewExchangeService(pool, NewMockPaymentProvider())
 
 	sellerID := testutil.InsertUser(t, pool, "+77020000004")
 	buyerID := testutil.InsertUser(t, pool, "+77020000005")
@@ -220,7 +220,7 @@ func seedFrozenMatchPastDeadline(t *testing.T, pool *pgxpool.Pool, payDeposit bo
 func TestExchangeService_ExpireOverdueMatches_ReactivatesAndRefunds(t *testing.T) {
 	pool := testutil.SetupDB(t)
 	ctx := context.Background()
-	svc := NewExchangeService(pool)
+	svc := NewExchangeService(pool, NewMockPaymentProvider())
 
 	matchID, listingID, requestID := seedFrozenMatchPastDeadline(t, pool, true)
 
@@ -263,7 +263,7 @@ func TestExchangeService_ExpireOverdueMatches_ReactivatesAndRefunds(t *testing.T
 func TestExchangeService_RunDailyTick_IdempotentOnOverdueMatch(t *testing.T) {
 	pool := testutil.SetupDB(t)
 	ctx := context.Background()
-	svc := NewExchangeService(pool)
+	svc := NewExchangeService(pool, NewMockPaymentProvider())
 
 	seedFrozenMatchPastDeadline(t, pool, false)
 
@@ -276,5 +276,110 @@ func TestExchangeService_RunDailyTick_IdempotentOnOverdueMatch(t *testing.T) {
 	}
 	if result.MatchesExpired != 0 {
 		t.Errorf("second tick's MatchesExpired = %d, want 0 (already expired, nothing left to do)", result.MatchesExpired)
+	}
+}
+
+// trackingRefundProvider lets tests assert a real gateway's Refund is
+// actually called (with the right provider payment id and amount) instead
+// of the deposit just being flipped to 'refunded' locally.
+type trackingRefundProvider struct {
+	*MockPaymentProvider
+	calls []struct {
+		providerPaymentID string
+		amount            int64
+	}
+	failRefund bool
+}
+
+func (p *trackingRefundProvider) Refund(ctx context.Context, providerPaymentID string, amount int64) (string, error) {
+	p.calls = append(p.calls, struct {
+		providerPaymentID string
+		amount            int64
+	}{providerPaymentID, amount})
+	if p.failRefund {
+		return "", context.DeadlineExceeded
+	}
+	return "real-refund-" + providerPaymentID, nil
+}
+
+// TestExchangeService_ExpireOverdueMatches_RefundsThroughRealProvider is
+// the Stage 11 regression for expiry refunds: a deposit charged through a
+// real (non-mock) provider must be reversed via PaymentProvider.Refund,
+// not just flipped to 'refunded' in the database.
+func TestExchangeService_ExpireOverdueMatches_RefundsThroughRealProvider(t *testing.T) {
+	pool := testutil.SetupDB(t)
+	ctx := context.Background()
+	provider := &trackingRefundProvider{MockPaymentProvider: NewMockPaymentProvider()}
+	svc := NewExchangeService(pool, provider)
+
+	matchID, _, _ := seedFrozenMatchPastDeadline(t, pool, false)
+	var sellerDepositID string
+	if err := pool.QueryRow(ctx, `SELECT id FROM deposits WHERE match_id = $1 AND role = 'seller'`, matchID).Scan(&sellerDepositID); err != nil {
+		t.Fatalf("find seller deposit: %v", err)
+	}
+	if _, err := pool.Exec(ctx,
+		`UPDATE deposits SET status = 'paid', paid_at = now(), provider = 'real-gateway', provider_payment_id = $2 WHERE id = $1`,
+		sellerDepositID, "pp-"+sellerDepositID,
+	); err != nil {
+		t.Fatalf("mark deposit paid via real provider: %v", err)
+	}
+
+	if _, err := svc.RunDailyTick(ctx); err != nil {
+		t.Fatalf("RunDailyTick: %v", err)
+	}
+
+	if len(provider.calls) != 1 {
+		t.Fatalf("Refund calls = %d, want 1", len(provider.calls))
+	}
+	if provider.calls[0].providerPaymentID != "pp-"+sellerDepositID || provider.calls[0].amount != 90_000 {
+		t.Errorf("Refund called with (%q, %d), want (%q, 90000)", provider.calls[0].providerPaymentID, provider.calls[0].amount, "pp-"+sellerDepositID)
+	}
+
+	var status, reference string
+	if err := pool.QueryRow(ctx, `SELECT status, provider_reference FROM deposits WHERE id = $1`, sellerDepositID).Scan(&status, &reference); err != nil {
+		t.Fatalf("reload deposit: %v", err)
+	}
+	if status != "refunded" {
+		t.Errorf("deposit status = %q, want refunded", status)
+	}
+	if reference != "real-refund-pp-"+sellerDepositID {
+		t.Errorf("provider_reference = %q, want the gateway's own refund id", reference)
+	}
+}
+
+// TestExchangeService_ExpireOverdueMatches_RefundFailureAbortsExpiry
+// guards the "never mark refunded before the provider confirms it" rule:
+// if the gateway's Refund call fails, the deposit must stay 'paid' and the
+// match must stay non-expired, not be silently marked refunded anyway.
+func TestExchangeService_ExpireOverdueMatches_RefundFailureAbortsExpiry(t *testing.T) {
+	pool := testutil.SetupDB(t)
+	ctx := context.Background()
+	provider := &trackingRefundProvider{MockPaymentProvider: NewMockPaymentProvider(), failRefund: true}
+	svc := NewExchangeService(pool, provider)
+
+	matchID, _, _ := seedFrozenMatchPastDeadline(t, pool, false)
+	var sellerDepositID string
+	if err := pool.QueryRow(ctx, `SELECT id FROM deposits WHERE match_id = $1 AND role = 'seller'`, matchID).Scan(&sellerDepositID); err != nil {
+		t.Fatalf("find seller deposit: %v", err)
+	}
+	if _, err := pool.Exec(ctx,
+		`UPDATE deposits SET status = 'paid', paid_at = now(), provider = 'real-gateway', provider_payment_id = $2 WHERE id = $1`,
+		sellerDepositID, "pp-"+sellerDepositID,
+	); err != nil {
+		t.Fatalf("mark deposit paid via real provider: %v", err)
+	}
+
+	if _, err := svc.RunDailyTick(ctx); err == nil {
+		t.Fatalf("RunDailyTick succeeded, want an error from the failed refund")
+	}
+
+	var status, matchStatus string
+	pool.QueryRow(ctx, `SELECT status FROM deposits WHERE id = $1`, sellerDepositID).Scan(&status)
+	pool.QueryRow(ctx, `SELECT status FROM matches WHERE id = $1`, matchID).Scan(&matchStatus)
+	if status != "paid" {
+		t.Errorf("deposit status after failed refund = %q, want still paid (never marked refunded before the provider confirms it)", status)
+	}
+	if matchStatus == "expired" {
+		t.Errorf("match status after failed refund = %q, want NOT expired (whole expiry transaction rolled back)", matchStatus)
 	}
 }

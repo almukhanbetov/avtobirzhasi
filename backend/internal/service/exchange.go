@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -31,12 +32,15 @@ const (
 // listings, buyer_requests, matches, deposits and notifications atomically
 // in a single unit of work.
 type ExchangeService struct {
-	db *pgxpool.Pool
+	db       *pgxpool.Pool
+	provider PaymentProvider
 }
 
-// NewExchangeService creates an ExchangeService.
-func NewExchangeService(db *pgxpool.Pool) *ExchangeService {
-	return &ExchangeService{db: db}
+// NewExchangeService creates an ExchangeService. provider is used only to
+// reverse a real charge on match expiry (see expireMatch) — pass the same
+// PaymentProvider instance given to NewDepositService.
+func NewExchangeService(db *pgxpool.Pool, provider PaymentProvider) *ExchangeService {
+	return &ExchangeService{db: db, provider: provider}
 }
 
 // TickResult summarizes one RunDailyTick pass, returned so callers (the
@@ -345,10 +349,7 @@ func (s *ExchangeService) expireMatch(ctx context.Context, o overdueMatch) error
 	); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx,
-		`UPDATE deposits SET status = 'refunded', refunded_at = now() WHERE match_id = $1 AND status = 'paid'`,
-		o.MatchID,
-	); err != nil {
+	if err := s.refundPaidDeposits(ctx, tx, o.MatchID); err != nil {
 		return err
 	}
 
@@ -376,6 +377,61 @@ func (s *ExchangeService) expireMatch(ctx context.Context, o overdueMatch) error
 	}
 
 	return tx.Commit(ctx)
+}
+
+// refundPaidDeposits reverses every paid deposit on a match before it's
+// flipped to 'refunded' — for a deposit that was actually charged through
+// a real provider (provider != "mock"), this calls PaymentProvider.Refund
+// first and aborts (rolling back the whole expireMatch transaction) if
+// that call fails, so a deposit is never marked refunded locally before
+// the provider confirms the money was actually returned. Mock deposits
+// (provider = "mock", no real charge ever happened) skip the provider
+// call entirely.
+func (s *ExchangeService) refundPaidDeposits(ctx context.Context, tx pgx.Tx, matchID string) error {
+	rows, err := tx.Query(ctx,
+		`SELECT id, amount, provider, coalesce(provider_payment_id, '') FROM deposits
+		 WHERE match_id = $1 AND status = 'paid' FOR UPDATE`,
+		matchID,
+	)
+	if err != nil {
+		return err
+	}
+	type paidDeposit struct {
+		ID, Provider, ProviderPaymentID string
+		Amount                          int64
+	}
+	var deposits []paidDeposit
+	for rows.Next() {
+		var d paidDeposit
+		if err := rows.Scan(&d.ID, &d.Amount, &d.Provider, &d.ProviderPaymentID); err != nil {
+			rows.Close()
+			return err
+		}
+		deposits = append(deposits, d)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for _, d := range deposits {
+		refundRef := ""
+		if d.Provider != "mock" && d.ProviderPaymentID != "" {
+			refundRef, err = s.provider.Refund(ctx, d.ProviderPaymentID, d.Amount)
+			if err != nil {
+				return fmt.Errorf("refund deposit %s via %s: %w", d.ID, d.Provider, err)
+			}
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE deposits SET status = 'refunded', refunded_at = now(),
+			 provider_reference = CASE WHEN $2 = '' THEN provider_reference ELSE $2 END
+			 WHERE id = $1`,
+			d.ID, refundRef,
+		); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // formatTenge renders a tenge amount with space-grouped thousands, e.g.

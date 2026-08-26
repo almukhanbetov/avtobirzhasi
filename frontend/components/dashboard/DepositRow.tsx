@@ -49,7 +49,7 @@ export function DepositRow({
         <span className="text-[17px] font-semibold tracking-tight text-foreground">
           {formatTenge(deposit.amount)}
         </span>
-        {deposit.status === "pending" ? (
+        {deposit.status === "pending" || deposit.status === "failed" ? (
           <Button size="md" onClick={onPay} disabled={isPaying}>
             {isPaying ? t("row.paying") : t("row.pay")}
           </Button>

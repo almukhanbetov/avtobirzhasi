@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { FlaskConical } from "lucide-react";
+import { FlaskConical, ShieldCheck } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { DepositRow } from "@/components/dashboard/DepositRow";
@@ -23,14 +23,20 @@ export function DepositsContent() {
     enabled: Boolean(token),
   });
 
-  // Paying a deposit also recomputes the parent Match's derived status
-  // server-side (and, once both sides have paid, unlocks contacts) — see
-  // lib/api/deposits.ts's payDeposit. Invalidate both queries so the
-  // Matches page reflects it without a manual refresh.
+  // Paying a deposit either resolves synchronously (mock provider — also
+  // recomputes the parent Match's derived status and, once both sides
+  // have paid, unlocks contacts server-side) or returns a redirectUrl for
+  // a real gateway's hosted payment page — in that case the browser
+  // leaves this page entirely and nothing is final until the return page
+  // polls getDepositStatus. See lib/api/deposits.ts's payDeposit.
   const payMutation = useMutation({
     mutationFn: (depositId: string) => payDeposit(token as string, depositId),
-    onSuccess: () => {
+    onSuccess: (result) => {
       setError(null);
+      if ("redirectUrl" in result) {
+        window.location.href = result.redirectUrl;
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["dashboard", "deposits"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard", "matches"] });
     },
@@ -38,6 +44,8 @@ export function DepositsContent() {
       setError(err instanceof ApiError ? err.message : t("dashboard.deposits.payError"));
     },
   });
+
+  const isMockMode = !data || data.every((deposit) => deposit.provider === "mock");
 
   return (
     <div className="flex flex-col gap-6">
@@ -50,10 +58,17 @@ export function DepositsContent() {
         </p>
       </div>
 
-      <div className="flex items-start gap-2.5 rounded-xl bg-warning-light p-4 text-[13px] leading-relaxed text-warning">
-        <FlaskConical size={16} className="mt-0.5 shrink-0" />
-        {t("dashboard.deposits.mockNotice")}
-      </div>
+      {isMockMode ? (
+        <div className="flex items-start gap-2.5 rounded-xl bg-warning-light p-4 text-[13px] leading-relaxed text-warning">
+          <FlaskConical size={16} className="mt-0.5 shrink-0" />
+          {t("dashboard.deposits.mockNotice")}
+        </div>
+      ) : (
+        <div className="flex items-start gap-2.5 rounded-xl bg-success-light p-4 text-[13px] leading-relaxed text-success">
+          <ShieldCheck size={16} className="mt-0.5 shrink-0" />
+          {t("dashboard.deposits.realNotice")}
+        </div>
+      )}
 
       {error ? <p className="text-[13px] text-destructive">{error}</p> : null}
 
