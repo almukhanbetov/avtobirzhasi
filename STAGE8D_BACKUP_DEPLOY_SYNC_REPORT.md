@@ -193,4 +193,51 @@ Workflow YAML: `python3 -c "import yaml; yaml.safe_load(...)"` — valid; job gr
 - `STAGE8D_BACKUP_DEPLOY_SYNC_REPORT.md` — this file.
 - `AVTOBIRZHASI_PROJECT_COMPLETION_AUDIT.md` — scoped update (see below).
 
-No application code, no migration, no test file, no UI file. No `git commit`/`git push` performed by this session.
+No application code, no migration, no test file, no UI file.
+
+---
+
+## Live Verification (2026-08-26, post-push)
+
+The first push of this stage's `deploy.yml` (commit `63e81cb`) **failed** on the new `Sync infrastructure files to VPS` step: `tar: Cowardly refusing to create an empty archive`. Root cause: `appleboy/scp-action`'s underlying tool (`drone-scp`) parses its `source` input as a `urfave/cli` `StringSlice` sourced from an environment variable, which splits on `,` by default — **not** on newlines. The original YAML used a multi-line block (`source: |` with one path per line), which arrives at the tool as one single string containing literal `\n` characters — an invalid path/glob that matches nothing, so `tar` had zero files to archive.
+
+**Reproduced exactly, then fixed, before pushing again**: downloaded the real `drone-scp v1.8.0` Linux binary locally and ran it directly with `INPUT_SOURCE` set both ways —
+```
+newline-joined  → tar: Cowardly refusing to create an empty archive   (reproduces the CI failure exactly)
+comma-joined    → tar succeeds; ssh connection attempted next (fails only on the fake host/key used for this local test)
+```
+and confirmed the fixed, comma-joined form (`source: "docker-compose.prod.yml,scripts/backup-db.sh,scripts/restore-db.sh"`) produces a tar archive containing exactly the 3 intended files with `scripts/`'s relative directory preserved:
+```
+$ tar -tzf <archive>
+docker-compose.prod.yml
+scripts/backup-db.sh
+scripts/restore-db.sh
+```
+Fixed in commit `40f579f` and pushed. **Real GitHub Actions run, commit `40f579f`** (https://github.com/almukhanbetov/avtobirzhasi/actions/runs/32966975734), **all 5 jobs succeeded**:
+
+| Job | Conclusion |
+|---|---|
+| Backend Quality | success |
+| Frontend Quality | success |
+| Docker Build Verification | success |
+| Build & Push Images | success |
+| Deploy to Production | success — both `Sync infrastructure files to VPS` and `Deploy over SSH` steps succeeded |
+
+`Deploy over SSH` succeeding is itself strong evidence the embedded backup-verification assertion passed (`set -e` plus an explicit `exit 1` on a missing/empty backup file would have failed this exact step otherwise) — but this was independently confirmed directly on the VPS by the operator, not just inferred from job status:
+
+```
+Infrastructure sync:            PASS
+backup-db.sh deployed:          PASS
+restore-db.sh deployed:         PASS
+Production backup creation:     PASS — /var/www/avtobirzhasi/backups/avtobirzhasi_20260826T125104Z.sql.gz
+Backup archive integrity:       PASS — gzip -t exit code 0
+Manual backup script exit code: 0
+Backup logging:                 PASS — backup.log shows successful creation + retention pruning
+Backup schedule:                PASS — cron entry installed for the avtobirzhasi backup marker
+Retention:                      PASS — configured for 14 days
+Off-host backup:                NOT IMPLEMENTED (unchanged, explicitly non-blocking)
+```
+
+This closes every item this stage set out to close except off-host backup, which was explicitly out of scope. **Stage 8D is complete and confirmed live**, not just implemented.
+
+No `git commit`/`git push` was performed *by this AI session* beyond what the user explicitly directed and executed themselves — see this stage's conversation history for the exact commit/push/verify sequence.
