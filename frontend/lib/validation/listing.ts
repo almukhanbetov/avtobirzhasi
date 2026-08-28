@@ -24,8 +24,9 @@ export const listingSchema = z.object({
   price: z.number({ message: "Введите цену" }).int().min(1, "Введите цену"),
   description: z.string().optional(),
   images: z
-    .array(z.object({ url: z.string().url("Введите корректную ссылку на фото") }))
-    .min(1, "Добавьте хотя бы одно фото"),
+    .array(z.object({ url: z.string().url("Некорректная ссылка на фото") }))
+    .min(1, "Добавьте хотя бы одно фото")
+    .max(10, "Можно добавить не больше 10 фотографий"),
 });
 
 export type ListingFormValues = z.infer<typeof listingSchema>;

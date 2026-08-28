@@ -4,6 +4,7 @@ package config
 
 import (
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -13,6 +14,17 @@ type Config struct {
 	DatabaseURL string
 	JWTSecret   string
 	Port        string
+
+	// UploadDir is the local filesystem directory listing photos are
+	// written to (see handlers.UploadsHandler). Defaults to "./uploads"
+	// for local dev; production overrides it to a path backed by a
+	// persistent Docker volume (see docker-compose.prod.yml).
+	UploadDir string
+	// PublicUploadBaseURL is prefixed onto "/uploads/<name>" to build the
+	// absolute URL stored in listing_images.url and returned to the
+	// browser. Defaults to the local API origin; production sets it to
+	// https://api.avtobirzhasi.kz.
+	PublicUploadBaseURL string
 
 	// FreedomPay credentials — see service.FreedomPayProvider. Left empty
 	// means "no real provider configured": main.go falls back to
@@ -39,6 +51,9 @@ func Load() *Config {
 		DatabaseURL: getEnv("DATABASE_URL", ""),
 		JWTSecret:   getEnv("JWT_SECRET", ""),
 		Port:        getEnv("PORT", "8080"),
+
+		UploadDir:           getEnv("UPLOAD_DIR", "./uploads"),
+		PublicUploadBaseURL: strings.TrimRight(getEnv("PUBLIC_UPLOAD_BASE_URL", "http://localhost:8080"), "/"),
 
 		FreedomPayMerchantID:  getEnv("FREEDOMPAY_MERCHANT_ID", ""),
 		FreedomPaySecretKey:   getEnv("FREEDOMPAY_SECRET_KEY", ""),

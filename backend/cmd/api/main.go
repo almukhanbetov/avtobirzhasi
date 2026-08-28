@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -57,6 +58,11 @@ func main() {
 	notificationRepo := repository.NewNotificationRepository(repo)
 	adminRepo := repository.NewAdminRepository(pool)
 
+	if err := os.MkdirAll(cfg.UploadDir, 0o755); err != nil {
+		log.Fatalf("could not create upload dir %q: %v", cfg.UploadDir, err)
+	}
+	log.Printf("listing photos: writing to %s, serving as %s/uploads/", cfg.UploadDir, cfg.PublicUploadBaseURL)
+
 	authService := service.NewAuthService(userRepo, cfg.JWTSecret)
 	paymentProvider := newPaymentProvider(cfg)
 	exchangeService := service.NewExchangeService(pool, paymentProvider)
@@ -81,6 +87,7 @@ func main() {
 	adminDepositsHandler := handlers.NewAdminDepositsHandler(depositRepo)
 	adminUsersHandler := handlers.NewAdminUsersHandler(userRepo)
 	webhooksHandler := handlers.NewWebhooksHandler(paymentProvider, depositService)
+	uploadsHandler := handlers.NewUploadsHandler(cfg.UploadDir, cfg.PublicUploadBaseURL)
 
 	router := gin.Default()
 	router.Use(middleware.CORS())
@@ -100,6 +107,9 @@ func main() {
 	// Public — a payment gateway cannot present a JWT. Authenticity comes
 	// entirely from PaymentProvider.VerifyWebhook's signature check.
 	handlers.RegisterWebhooksRoutes(api, webhooksHandler)
+	// POST /api/uploads/images is JWT-protected; GET /uploads/:name is
+	// public static serving (mounted on the engine, outside /api).
+	handlers.RegisterUploadsRoutes(api, router, uploadsHandler, cfg.JWTSecret)
 
 	// Admin-facing product features (moderation, stats, and the Stage 10
 	// monitoring views) live under /api/admin — reachable over the public

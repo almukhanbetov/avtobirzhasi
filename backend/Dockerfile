@@ -28,5 +28,10 @@ COPY --from=builder /out/api ./api
 COPY --from=builder /go/bin/goose ./goose
 COPY migrations ./migrations
 
+# Mount point for the listing-photos volume (see docker-compose.prod.yml).
+# The process also creates this on startup, but declaring it here keeps
+# ownership sane if the container ever runs without the volume attached.
+RUN mkdir -p /data/uploads
+
 EXPOSE 8080
 ENTRYPOINT ["./api"]

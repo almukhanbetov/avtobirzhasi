@@ -1,2 +1,6 @@
 .env
 /bin/
+
+# Local-dev listing-photo uploads (UPLOAD_DIR default). Production keeps
+# these on a Docker volume — see docker-compose.prod.yml.
+/uploads/

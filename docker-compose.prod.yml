@@ -47,8 +47,18 @@ services:
       # Reaches postgres by compose service name, not host.docker.internal —
       # both containers are on the same compose-managed network.
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
+      # Seller-uploaded listing photos. UPLOAD_DIR is inside the named
+      # volume below so the files survive container recreation on every
+      # deploy; PUBLIC_UPLOAD_BASE_URL is the origin Caddy serves them
+      # from (api.avtobirzhasi.kz reverse-proxies /uploads/* to :8080,
+      # same as /api). Set here rather than in backend.env so a deploy
+      # can't forget them.
+      UPLOAD_DIR: /data/uploads
+      PUBLIC_UPLOAD_BASE_URL: https://api.avtobirzhasi.kz
     env_file:
       - ./backend.env
+    volumes:
+      - avtobirzhasi_uploads:/data/uploads
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
@@ -85,3 +95,7 @@ services:
 
 volumes:
   avtobirzhasi_pgdata:
+  # Listing photos uploaded by sellers. Like avtobirzhasi_pgdata, this is
+  # a named volume — never run `docker compose down -v` against this file
+  # or these images are gone.
+  avtobirzhasi_uploads:

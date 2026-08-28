@@ -26,7 +26,7 @@ import {
   steeringWheelLabels,
   transmissionLabels,
 } from "@/lib/labels/car";
-import { ImageUrlField } from "@/features/listings/ImageUrlField";
+import { ImageUploadField } from "@/features/listings/ImageUploadField";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 const TOTAL_STEPS = 3;
@@ -295,7 +295,11 @@ export function ListingForm() {
             error={errors.description?.message}
             {...register("description")}
           />
-          <ImageUrlField fieldArray={imageFieldArray} error={errors.images?.message} />
+          <ImageUploadField
+            fieldArray={imageFieldArray}
+            error={errors.images?.message}
+            token={token as string}
+          />
         </div>
       ) : null}
 

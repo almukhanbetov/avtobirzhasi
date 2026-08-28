@@ -19,6 +19,9 @@ export class ApiError extends Error {
 
 interface ApiFetchOptions {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
+  // A plain object is JSON-encoded. A FormData is sent as-is so the
+  // browser sets its own multipart/form-data Content-Type with a
+  // boundary — used by the listing-photo upload (see lib/api/uploads.ts).
   body?: unknown;
   token?: string | null;
 }
@@ -28,12 +31,24 @@ async function request<T>(
   path: string,
   options: ApiFetchOptions,
 ): Promise<T> {
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
   const headers: Record<string, string> = {};
-  if (options.body !== undefined) {
+  if (options.body !== undefined && !isFormData) {
     headers["Content-Type"] = "application/json";
   }
   if (options.token) {
     headers["Authorization"] = `Bearer ${options.token}`;
+  }
+
+  let body: BodyInit | undefined;
+  if (options.body === undefined) {
+    body = undefined;
+  } else if (isFormData) {
+    body = options.body as FormData;
+  } else {
+    body = JSON.stringify(options.body);
   }
 
   let res: Response;
@@ -41,7 +56,7 @@ async function request<T>(
     res = await fetch(`${baseUrl}${path}`, {
       method: options.method ?? "GET",
       headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body,
       cache: "no-store",
     });
   } catch {

@@ -32,5 +32,9 @@ api.avtobirzhasi.kz {
 		respond 404
 	}
 
+	# /uploads/* (seller listing photos — see
+	# backend/internal/handlers/uploads.go) is served by the backend
+	# itself off a persistent Docker volume, so it needs no rule of its
+	# own: the catch-all reverse_proxy below already forwards it to :8080.
 	reverse_proxy 127.0.0.1:8080
 }
