@@ -411,6 +411,10 @@ export const translations = {
     "admin.sidebar.title": "Админка",
     "admin.listings.title": "Все объявления",
     "admin.users.title": "Пользователи",
+    "admin.denied.title": "Доступ запрещён",
+    "admin.denied.body":
+      "Эта страница доступна только администраторам. Ваш аккаунт не имеет прав администратора.",
+    "admin.denied.home": "На главную",
 
     "admin.filter.status": "Статус",
     "admin.filter.anyStatus": "Любой статус",
@@ -961,6 +965,10 @@ export const translations = {
     "admin.sidebar.title": "Әкімшілік панелі",
     "admin.listings.title": "Барлық хабарландырулар",
     "admin.users.title": "Пайдаланушылар",
+    "admin.denied.title": "Қатынау тыйым салынған",
+    "admin.denied.body":
+      "Бұл бет тек әкімшілерге қолжетімді. Сіздің аккаунтыңызда әкімші құқықтары жоқ.",
+    "admin.denied.home": "Басты бетке",
 
     "admin.filter.status": "Мәртебе",
     "admin.filter.anyStatus": "Кез келген мәртебе",
