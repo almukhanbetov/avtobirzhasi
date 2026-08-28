@@ -215,19 +215,73 @@ FILES CHANGED:
 
 ---
 
-## Production Verification
+## Final Production Verification (2026-08-28)
 
-_Filled in after this commit is pushed and the GitHub Actions deploy
-completes._
+**Deploy:** GitHub Actions fully green (Backend Quality, Frontend Quality,
+Docker Build Verification, Build & Push Images, Deploy to Production).
+Deployed commit: **`1ca1b35`**.
 
-Expected on `https://avtobirzhasi.kz/admin` after deploy:
-- guest → `/login`
-- signed-in non-admin → "Доступ запрещён" panel (no homepage)
-- admin → admin dashboard
+### How the client behaviour was verified
 
-> Note: for an admin login to actually succeed on production, the account
-> must have `users.role='admin'` set in the production database
-> (`docker compose -f docker-compose.prod.yml exec postgres psql -U postgres
-> -d avtobirzhsi_db -c "UPDATE users SET role='admin' WHERE phone='+7…';"`).
-> That is orthogonal to this fix — an unpromoted account now sees the
-> access-denied panel instead of the homepage.
+A real browser click-through isn't available in this environment, so the
+**deployed** production JS bundle was pulled and the compiled `RequireAdmin`
+logic read directly (`/_next/static/chunks/…`). De-minified, it is exactly
+the fix:
+
+```js
+isAdmin  = status==="authenticated" && user?.role==="admin"
+isDenied = status==="authenticated" && !!user && user.role!=="admin"
+useEffect(() => { if (status==="unauthenticated") router.replace("/login") }, [status, router])
+return isAdmin  ? <>{children}</>
+     : isDenied ? <div…> h("admin.denied.title") / h("admin.denied.body") / <Link href="/">h("admin.denied.home")</Link> </div>
+     :            <div…>{h("auth.loading")}</div>
+```
+
+The **only** `.replace()` call in that chunk is `.replace("/login")`, fired
+solely for `status==="unauthenticated"`. There is **no `.replace("/")`
+anywhere** — the homepage fallback is gone.
+
+### Results
+
+| Check | Result | Evidence |
+|---|---|---|
+| GitHub Actions | **PASS** | all 5 jobs green |
+| Production commit | **`1ca1b35`** | `origin/main` = `1ca1b35`; deployed frontend bundle contains `admin.denied` strings (ru + kz) — the Stage 13 code |
+| `/admin` route (HTTP) | **PASS** | `HTTP/2 200`, `text/html`, `x-nextjs-prerender: 1`, **no** `Location` / redirect hop; `<title>Dashboard — Админка</title>`; 0 homepage markers in the body |
+| Guest `/admin` | **PASS** | deployed guard: `status==="unauthenticated"` → `router.replace("/login")` and nothing else; renders the loading spinner meanwhile — never `/`, never homepage |
+| Non-admin `/admin` | **PASS** | deployed guard renders the `admin.denied.*` panel (title + body + "На главную" link) for `authenticated && role!=="admin"`; **no `router.replace` call at all**; no homepage |
+| Admin `/admin` | **PASS** | deployed guard returns `children` (the real dashboard) when `role==="admin"`; the dashboard's `GET /api/admin/stats` returns `200` for `role='admin'` (verified locally this session + live on prod in Stage 1; backend `AdminOnly` unchanged since) |
+| Homepage fallback removed | **PASS** | `.replace("/")` does not appear in the deployed `RequireAdmin` chunk |
+| Admin child routes | **PASS** | live: `/admin/listings 200`, `/admin/requests 200`, `/admin/matches 200`, `/admin/deposits 200`, `/admin/users 200`, `/admin/moderation 200` — each with its own `— Админка` title, 0 homepage markers |
+| Admin API RBAC | **PASS** | live on prod: guest `GET /api/admin/stats` → **401**, `GET /api/admin/users` → **401**; a freshly-registered `role='user'` account → **403** on `stats/users/listings/requests/matches/deposits/listings/pending`; `role='admin'` → **200** (verified locally this session + Stage 1 live on prod) |
+
+```
+STAGE 13 FINAL PRODUCTION VERIFICATION
+
+GitHub Actions:            PASS
+Production commit:         1ca1b35
+Guest /admin:              PASS   (→ /login only; never homepage)
+Non-admin /admin:          PASS   ("Доступ запрещён" panel; no redirect; no homepage)
+Admin /admin:              PASS   (renders admin dashboard; admin API 200 for role='admin')
+Homepage fallback removed: PASS   (no .replace("/") in the deployed RequireAdmin chunk)
+Admin child routes:        PASS   (/admin/{listings,requests,matches,deposits,users,moderation} all 200)
+Admin API RBAC:            PASS   (guest 401, non-admin 403 — live; admin 200 — session + Stage 1)
+
+Stage 13:                  COMPLETE
+```
+
+### Notes
+
+- A throwaway non-admin account `+77000013013` ("S13 Verify") was
+  registered on production for the RBAC check. There is no self-delete
+  endpoint (`DELETE /api/auth/me` → 404); remove it from
+  `/admin/users` once an admin account exists, or with
+  `DELETE FROM users WHERE phone='+77000013013';` on the prod DB.
+- For an admin to actually reach the dashboard on production, their
+  account still needs `users.role='admin'` in the prod DB
+  (`docker compose -f docker-compose.prod.yml exec postgres psql -U postgres
+  -d avtobirzhsi_db -c "UPDATE users SET role='admin' WHERE phone='+7…';"`).
+  This is orthogonal to the fix — an unpromoted account now correctly sees
+  the "Доступ запрещён" panel instead of the homepage.
+- No code changes were made during this verification (production behaviour
+  matches the fix).
