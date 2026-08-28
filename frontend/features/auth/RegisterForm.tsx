@@ -11,6 +11,7 @@ import { registerSchema, type RegisterFormValues } from "@/lib/validation/auth";
 import { register as registerAccount } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { postAuthPath } from "@/lib/auth/postAuthPath";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function RegisterForm() {
@@ -29,7 +30,9 @@ export function RegisterForm() {
     try {
       const { token, user } = await registerAccount(values);
       setSession(token, user);
-      router.push("/dashboard");
+      // New accounts are always role='user', so this is /dashboard — via
+      // the shared helper for consistency with login.
+      router.replace(postAuthPath(user));
     } catch (err) {
       setApiError(
         err instanceof ApiError

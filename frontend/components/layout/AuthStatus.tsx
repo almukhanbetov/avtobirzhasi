@@ -36,6 +36,15 @@ export function AuthStatus() {
               className="fixed inset-0 z-40 cursor-default"
             />
             <div className="absolute right-0 z-50 mt-2 flex w-52 flex-col overflow-hidden rounded-xl border border-border bg-surface shadow-lg">
+              {user.role === "admin" ? (
+                <Link
+                  href="/admin"
+                  onClick={() => setOpen(false)}
+                  className="border-b border-border px-4 py-3 text-[14px] font-medium text-foreground hover:bg-black/[0.04]"
+                >
+                  {t("header.adminPanel")}
+                </Link>
+              ) : null}
               <Link
                 href="/dashboard"
                 onClick={() => setOpen(false)}

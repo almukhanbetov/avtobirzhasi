@@ -67,6 +67,15 @@ export function MobileMenu() {
                 >
                   {user.name}
                 </Link>
+                {user.role === "admin" ? (
+                  <Link
+                    href="/admin"
+                    onClick={() => setOpen(false)}
+                    className="px-3 text-[15px] font-medium text-brand"
+                  >
+                    {t("header.adminPanel")}
+                  </Link>
+                ) : null}
                 <button
                   type="button"
                   onClick={() => {

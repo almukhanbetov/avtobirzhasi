@@ -11,6 +11,7 @@ import { loginSchema, type LoginFormValues } from "@/lib/validation/auth";
 import { login } from "@/lib/api/auth";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
+import { postAuthPath } from "@/lib/auth/postAuthPath";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function LoginForm() {
@@ -29,7 +30,11 @@ export function LoginForm() {
     try {
       const { token, user } = await login(values);
       setSession(token, user);
-      router.push("/dashboard");
+      // Role-based: an admin logging in lands on /admin, everyone else on
+      // /dashboard. `user` here is the fresh login response, so its role
+      // is authoritative. replace(), not push(), so Back doesn't return
+      // to the login form.
+      router.replace(postAuthPath(user));
     } catch (err) {
       setApiError(
         err instanceof ApiError ? err.message : t("auth.loginError"),
