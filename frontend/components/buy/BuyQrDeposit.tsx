@@ -34,7 +34,7 @@ export function BuyQrDeposit() {
             </p>
           </div>
 
-          <div className="w-full max-w-[240px] rounded-2xl bg-white p-3 shadow-sm sm:max-w-[280px] sm:p-4">
+          <div className="w-full max-w-[260px] rounded-2xl bg-white p-3 shadow-sm sm:max-w-[320px] sm:p-4">
             <Image
               src="/images/halyk-qr.jpg"
               alt={t("buy.qr.imageAlt")}

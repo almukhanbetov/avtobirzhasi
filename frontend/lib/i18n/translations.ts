@@ -185,7 +185,7 @@ export const translations = {
     "buy.howTo.step1.title": "Выберите автомобиль",
     "buy.howTo.step1.description":
       "Откройте подходящее объявление и проверьте текущую цену.",
-    "buy.howTo.step2.title": "Внесите 1% по QR",
+    "buy.howTo.step2.title": "Внесите 1% от текущей цены по QR",
     "buy.howTo.step2.description":
       "Оплатите 1% от текущей стоимости автомобиля по QR-коду.",
     "buy.howTo.step3.title": "Получите контакт продавца",
@@ -758,7 +758,7 @@ export const translations = {
     "buy.howTo.step1.title": "Автокөлікті таңдаңыз",
     "buy.howTo.step1.description":
       "Қолайлы хабарландыруды ашып, ағымдағы бағаны тексеріңіз.",
-    "buy.howTo.step2.title": "QR арқылы 1% төлеңіз",
+    "buy.howTo.step2.title": "QR арқылы ағымдағы бағаның 1%-ын төлеңіз",
     "buy.howTo.step2.description":
       "Автокөліктің ағымдағы құнының 1%-ын QR-код арқылы төлеңіз.",
     "buy.howTo.step3.title": "Сатушының байланысын алыңыз",
