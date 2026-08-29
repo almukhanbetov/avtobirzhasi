@@ -1,12 +1,20 @@
 "use client";
 
-import { ArrowRight, GitMerge, ShoppingBag } from "lucide-react";
+import { ArrowRight, GitMerge, Phone, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
-export function BuyingWays() {
+// Deposit phone for the direct "buy now at the current price" flow.
+// Digits-only for the tel: href; the spaced form is display-only.
+const DEPOSIT_PHONE = "+77027897120";
+const DEPOSIT_PHONE_DISPLAY = "+7 702 789 71 20";
+
+// `withQrDeposit` is only set on the /buy page: it drops the Halyk QR
+// payment area into the left ("Купить сейчас по текущей цене") card. The
+// homepage renders <BuyingWays /> with no prop, so nothing changes there.
+export function BuyingWays({ withQrDeposit = false }: { withQrDeposit?: boolean }) {
   const { t } = useLanguage();
 
   const ways = [
@@ -22,6 +30,7 @@ export function BuyingWays() {
       ],
       href: "/cars",
       cta: t("home.buyingWays.way1.cta"),
+      qr: withQrDeposit,
     },
     {
       icon: GitMerge,
@@ -34,6 +43,7 @@ export function BuyingWays() {
       ],
       href: "/exchange",
       cta: t("home.buyingWays.way2.cta"),
+      qr: false,
     },
   ];
 
@@ -46,7 +56,7 @@ export function BuyingWays() {
           description={t("home.buyingWays.description")}
         />
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="grid grid-cols-1 items-stretch gap-6 lg:grid-cols-2">
           {ways.map((way) => (
             <div
               key={way.title}
@@ -74,9 +84,37 @@ export function BuyingWays() {
                   </li>
                 ))}
               </ul>
+
+              {way.qr ? (
+                <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-background p-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:p-5 sm:text-left">
+                  <div className="shrink-0 rounded-lg bg-white p-2 shadow-sm">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src="/images/halyk-qr.jpg"
+                      alt={t("buy.qr.imageAlt")}
+                      width={595}
+                      height={842}
+                      className="block h-auto w-[170px] max-w-full rounded sm:w-[200px]"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[14px] font-medium leading-snug text-foreground">
+                      {t("buy.qr.text")}
+                    </span>
+                    <a
+                      href={`tel:${DEPOSIT_PHONE}`}
+                      className="inline-flex items-center gap-2 self-center text-[17px] font-semibold text-brand hover:text-brand-dark sm:self-start"
+                    >
+                      <Phone size={16} strokeWidth={2} />
+                      {DEPOSIT_PHONE_DISPLAY}
+                    </a>
+                  </div>
+                </div>
+              ) : null}
+
               <Link
                 href={way.href}
-                className="mt-2 inline-flex items-center gap-2 text-[15px] font-semibold text-brand hover:text-brand-dark"
+                className="mt-auto inline-flex items-center gap-2 text-[15px] font-semibold text-brand hover:text-brand-dark"
               >
                 {way.cta}
                 <ArrowRight size={16} />
