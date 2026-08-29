@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { Phone } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
@@ -15,9 +14,11 @@ const DEPOSIT_PHONE_DISPLAY = "+7 702 789 71 20";
 // tile — a QR must stay high-contrast — wrapped in the site's normal dark
 // card so it doesn't read as a foreign screenshot.
 //
-// `unoptimized` keeps the code crisp (the image optimizer can soften fine
-// QR modules); explicit width/height + `h-auto w-full` scales it to the
-// tile width without distorting its portrait aspect ratio.
+// A plain <img> on purpose: the file is served straight from /public and
+// needs no optimization (a QR must not be re-encoded), so next/image
+// would only add a lazy-load + a "color:transparent" placeholder state
+// for zero benefit. width/height give the intrinsic ratio; `h-auto
+// w-full` scales it to the tile without distorting it.
 export function BuyQrDeposit() {
   const { t } = useLanguage();
 
@@ -35,13 +36,13 @@ export function BuyQrDeposit() {
           </div>
 
           <div className="w-full max-w-[260px] rounded-2xl bg-white p-3 shadow-sm sm:max-w-[320px] sm:p-4">
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="/images/halyk-qr.jpg"
               alt={t("buy.qr.imageAlt")}
               width={595}
               height={842}
-              unoptimized
-              className="h-auto w-full"
+              className="block h-auto w-full rounded-lg"
             />
           </div>
 
