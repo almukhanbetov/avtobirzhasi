@@ -18,6 +18,7 @@ export function BuyingWays() {
         t("home.buyingWays.way1.point1"),
         t("home.buyingWays.way1.point2"),
         t("home.buyingWays.way1.point3"),
+        t("home.buyingWays.way1.point4"),
       ],
       href: "/cars",
       cta: t("home.buyingWays.way1.cta"),

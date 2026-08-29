@@ -162,12 +162,13 @@ export const translations = {
     "home.buyingWays.title": "Два способа купить автомобиль",
     "home.buyingWays.description":
       "Выбирайте привычную покупку по объявлению или доверьте подбор цены Автобирже.",
-    "home.buyingWays.way1.title": "Купить сейчас",
+    "home.buyingWays.way1.title": "Купить сейчас по текущей цене",
     "home.buyingWays.way1.description":
-      "Выбирайте из готовых объявлений и связывайтесь с продавцом напрямую по опубликованной цене.",
-    "home.buyingWays.way1.point1": "Актуальные цены от собственников",
-    "home.buyingWays.way1.point2": "Прямая связь с продавцом",
-    "home.buyingWays.way1.point3": "Можно оформить сделку сегодня",
+      "Выберите автомобиль по текущей цене, внесите 1% от стоимости через QR и свяжитесь с нами. После подтверждения депозита мы предоставим контакт продавца.",
+    "home.buyingWays.way1.point1": "Покупка автомобиля по текущей цене",
+    "home.buyingWays.way1.point2": "Депозит — 1% от стоимости автомобиля",
+    "home.buyingWays.way1.point3": "После подтверждения депозита открывается контакт продавца",
+    "home.buyingWays.way1.point4": "Сделку можно начать сразу",
     "home.buyingWays.way1.cta": "Смотреть автомобили",
     "home.buyingWays.way2.title": "Купить через Автобиржу",
     "home.buyingWays.way2.description":
@@ -176,6 +177,25 @@ export const translations = {
     "home.buyingWays.way2.point2": "Match создаётся автоматически",
     "home.buyingWays.way2.point3": "Контакты открываются после депозита",
     "home.buyingWays.way2.cta": "Создать заявку на покупку",
+
+    "buy.howTo.eyebrow": "Прямая покупка",
+    "buy.howTo.title": "Как купить по текущей цене",
+    "buy.howTo.subtitle":
+      "Для прямой покупки автомобиля внесите депозит 1% от текущей цены.",
+    "buy.howTo.step1.title": "Выберите автомобиль",
+    "buy.howTo.step1.description":
+      "Откройте подходящее объявление и проверьте текущую цену.",
+    "buy.howTo.step2.title": "Внесите 1% по QR",
+    "buy.howTo.step2.description":
+      "Оплатите 1% от текущей стоимости автомобиля по QR-коду.",
+    "buy.howTo.step3.title": "Получите контакт продавца",
+    "buy.howTo.step3.description":
+      "После подтверждения платежа свяжитесь с нами по номеру +77027897120. После проверки депозита вам будет предоставлен номер телефона продавца.",
+    "buy.qr.title": "QR для внесения депозита",
+    "buy.qr.text":
+      "Внесите по данному QR 1% от текущей цены выбранного автомобиля.",
+    "buy.qr.callAfter": "После оплаты позвоните:",
+    "buy.qr.imageAlt": "Halyk QR для оплаты депозита",
 
     "home.fresh.eyebrow": "Свежие объявления",
     "home.fresh.title": "Актуальные автомобили",
@@ -715,12 +735,13 @@ export const translations = {
     "home.buyingWays.title": "Автокөлік сатып алудың екі тәсілі",
     "home.buyingWays.description":
       "Хабарландыру бойынша әдеттегі сатып алуды таңдаңыз немесе баға таңдауды Автобиржаға сеніп тапсырыңыз.",
-    "home.buyingWays.way1.title": "Қазір сатып алу",
+    "home.buyingWays.way1.title": "Қазір ағымдағы баға бойынша сатып алу",
     "home.buyingWays.way1.description":
-      "Дайын хабарландырулардан таңдап, жарияланған баға бойынша сатушымен тікелей байланысыңыз.",
-    "home.buyingWays.way1.point1": "Иелерінен нақты бағалар",
-    "home.buyingWays.way1.point2": "Сатушымен тікелей байланыс",
-    "home.buyingWays.way1.point3": "Мәмілені бүгін жасауға болады",
+      "Ағымдағы баға бойынша автокөлікті таңдап, құнының 1%-ын QR арқылы төлеп, бізбен байланысыңыз. Депозит расталғаннан кейін сатушының байланысын береміз.",
+    "home.buyingWays.way1.point1": "Автокөлікті ағымдағы баға бойынша сатып алу",
+    "home.buyingWays.way1.point2": "Депозит — автокөлік құнының 1%-ы",
+    "home.buyingWays.way1.point3": "Депозит расталғаннан кейін сатушының байланысы ашылады",
+    "home.buyingWays.way1.point4": "Мәмілені бірден бастауға болады",
     "home.buyingWays.way1.cta": "Автокөліктерді қарау",
     "home.buyingWays.way2.title": "Автобиржа арқылы сатып алу",
     "home.buyingWays.way2.description":
@@ -729,6 +750,25 @@ export const translations = {
     "home.buyingWays.way2.point2": "Match автоматты түрде жасалады",
     "home.buyingWays.way2.point3": "Байланыстар депозиттен кейін ашылады",
     "home.buyingWays.way2.cta": "Сатып алу өтінімін жасау",
+
+    "buy.howTo.eyebrow": "Тікелей сатып алу",
+    "buy.howTo.title": "Ағымдағы баға бойынша қалай сатып алу керек",
+    "buy.howTo.subtitle":
+      "Автокөлікті тікелей сатып алу үшін ағымдағы бағаның 1% депозитін төлеңіз.",
+    "buy.howTo.step1.title": "Автокөлікті таңдаңыз",
+    "buy.howTo.step1.description":
+      "Қолайлы хабарландыруды ашып, ағымдағы бағаны тексеріңіз.",
+    "buy.howTo.step2.title": "QR арқылы 1% төлеңіз",
+    "buy.howTo.step2.description":
+      "Автокөліктің ағымдағы құнының 1%-ын QR-код арқылы төлеңіз.",
+    "buy.howTo.step3.title": "Сатушының байланысын алыңыз",
+    "buy.howTo.step3.description":
+      "Төлем расталғаннан кейін +77027897120 нөмірі арқылы бізбен байланысыңыз. Депозит тексерілгеннен кейін сізге сатушының телефон нөмірі беріледі.",
+    "buy.qr.title": "Депозит төлеуге арналған QR",
+    "buy.qr.text":
+      "Осы QR арқылы таңдалған автокөліктің ағымдағы бағасының 1%-ын төлеңіз.",
+    "buy.qr.callAfter": "Төлегеннен кейін қоңырау шалыңыз:",
+    "buy.qr.imageAlt": "Депозит төлеуге арналған Halyk QR",
 
     "home.fresh.eyebrow": "Жаңа хабарландырулар",
     "home.fresh.title": "Өзекті автокөліктер",
