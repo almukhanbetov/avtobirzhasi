@@ -87,16 +87,19 @@ export function BuyingWays({ withQrDeposit = false }: { withQrDeposit?: boolean 
 
               {way.qr ? (
                 <div className="flex flex-col items-center gap-4 rounded-xl border border-border bg-background p-4 text-center sm:flex-row sm:items-center sm:gap-5 sm:p-5 sm:text-left">
-                  <div className="shrink-0 rounded-lg bg-white p-2 shadow-sm">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src="/images/halyk-qr.jpg"
-                      alt={t("buy.qr.imageAlt")}
-                      width={595}
-                      height={842}
-                      className="block h-auto w-[170px] max-w-full rounded sm:w-[200px]"
-                    />
-                  </div>
+                  {/* Plain, eager <img>: served straight from /public, a QR
+                      must not be re-encoded or lazy-loaded. White padding
+                      keeps it readable on the dark card. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src="/images/halyk-qr.jpg"
+                    alt={t("buy.qr.imageAlt")}
+                    width={595}
+                    height={842}
+                    loading="eager"
+                    decoding="sync"
+                    className="block h-auto w-[180px] max-w-full shrink-0 rounded-lg bg-white object-contain p-2 shadow-sm sm:w-[210px]"
+                  />
                   <div className="flex flex-col gap-2">
                     <span className="text-[14px] font-medium leading-snug text-foreground">
                       {t("buy.qr.text")}
