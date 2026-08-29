@@ -11,10 +11,10 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 const DEPOSIT_PHONE = "+77027897120";
 const DEPOSIT_PHONE_DISPLAY = "+7 702 789 71 20";
 
-// `withQrDeposit` is only set on the /buy page: it drops the Halyk QR
-// payment area into the left ("Купить сейчас по текущей цене") card. The
-// homepage renders <BuyingWays /> with no prop, so nothing changes there.
-export function BuyingWays({ withQrDeposit = false }: { withQrDeposit?: boolean }) {
+// The left ("Купить сейчас по текущей цене") card always carries the
+// Halyk QR payment area — identical on the homepage and on /buy, which
+// both render this one component. The right card never does.
+export function BuyingWays() {
   const { t } = useLanguage();
 
   const ways = [
@@ -30,7 +30,7 @@ export function BuyingWays({ withQrDeposit = false }: { withQrDeposit?: boolean 
       ],
       href: "/cars",
       cta: t("home.buyingWays.way1.cta"),
-      qr: withQrDeposit,
+      qr: true,
     },
     {
       icon: GitMerge,

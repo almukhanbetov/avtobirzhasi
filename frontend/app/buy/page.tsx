@@ -8,14 +8,13 @@ export const metadata: Metadata = {
     "Два способа купить автомобиль: сразу по текущей цене с депозитом 1% по QR, или через Автобиржу с автоматическим подбором цены.",
 };
 
-// /buy reuses the two-cards section (BuyingWays — also on the homepage);
-// `withQrDeposit` puts the Halyk QR payment area inside the left "Купить
-// сейчас по текущей цене" card. Below it, BuyHowToSteps explains the flow.
-// The right "Купить через Автобиржу" card is unchanged.
+// /buy reuses the two-cards section (BuyingWays — also on the homepage;
+// its left card already carries the Halyk QR). Below it, BuyHowToSteps
+// explains the flow. The right "Купить через Автобиржу" card is unchanged.
 export default function BuyPage() {
   return (
     <>
-      <BuyingWays withQrDeposit />
+      <BuyingWays />
       <BuyHowToSteps />
     </>
   );

@@ -3,10 +3,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 import { BuyingWays } from "./BuyingWays";
 
-function renderWays(props?: { withQrDeposit?: boolean }) {
+function renderWays() {
   return render(
     <LanguageProvider>
-      <BuyingWays {...props} />
+      <BuyingWays />
     </LanguageProvider>,
   );
 }
@@ -45,37 +45,42 @@ describe("BuyingWays — left 'buy now at current price' card", () => {
   });
 });
 
-describe("BuyingWays — QR deposit area (withQrDeposit, /buy only)", () => {
-  it("does NOT render the QR by default (homepage)", () => {
+describe("BuyingWays — Halyk QR deposit area (same on homepage and /buy)", () => {
+  it("renders exactly one plain <img> QR, inside the LEFT card only", () => {
     const { container } = renderWays();
-    expect(container.querySelector('img[src="/images/halyk-qr.jpg"]')).toBeNull();
-    expect(screen.queryByRole("link", { name: /702 789 71 20/ })).toBeNull();
-  });
-
-  it("renders exactly one plain <img> QR inside the left card when enabled", () => {
-    const { container } = renderWays({ withQrDeposit: true });
     const imgs = container.querySelectorAll('img[src="/images/halyk-qr.jpg"]');
     expect(imgs).toHaveLength(1);
     const img = imgs[0];
-    // plain <img>: no next/image markers
+    // plain <img>: no next/image markers, no lazy
     expect(img.hasAttribute("data-nimg")).toBe(false);
     expect(img.getAttribute("loading")).not.toBe("lazy");
     expect(img.getAttribute("src")?.startsWith("http")).toBe(false);
 
-    // it sits inside the left ("Купить сейчас...") card, not the right one
     const leftCard = screen
       .getByText("Купить сейчас по текущей цене")
       .closest("div.rounded-2xl.border");
-    expect(leftCard).not.toBeNull();
-    expect(leftCard?.contains(img)).toBe(true);
     const rightCard = screen
       .getByText("Купить через Автобиржу")
       .closest("div.rounded-2xl.border");
+    expect(leftCard?.contains(img)).toBe(true);
     expect(rightCard?.contains(img)).toBe(false);
   });
 
+  it("places the QR after the bullet list and before the CTA", () => {
+    renderWays();
+    const leftCard = screen
+      .getByText("Купить сейчас по текущей цене")
+      .closest("div.rounded-2xl.border")!;
+    const ul = leftCard.querySelector("ul")!;
+    const img = leftCard.querySelector('img[src="/images/halyk-qr.jpg"]')!;
+    const cta = screen.getByRole("link", { name: /Смотреть автомобили/ });
+    // DOCUMENT_POSITION_FOLLOWING (4) means the arg comes after the node
+    expect(ul.compareDocumentPosition(img) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(img.compareDocumentPosition(cta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it("shows the QR caption and a clickable tel: phone", () => {
-    renderWays({ withQrDeposit: true });
+    renderWays();
     expect(screen.getByText("Внесите 1% от текущей цены по QR")).toBeTruthy();
     const link = screen.getByRole("link", { name: /702 789 71 20/ });
     expect(link.getAttribute("href")).toBe("tel:+77027897120");
@@ -83,7 +88,7 @@ describe("BuyingWays — QR deposit area (withQrDeposit, /buy only)", () => {
 
   it("uses a real Kazakh caption, not the raw key", async () => {
     localStorage.setItem("avtobirzhasi_lang", "kz");
-    renderWays({ withQrDeposit: true });
+    renderWays();
     await waitFor(() =>
       expect(screen.getByText("QR арқылы ағымдағы бағаның 1%-ын төлеңіз")).toBeTruthy(),
     );
