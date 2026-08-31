@@ -175,15 +175,27 @@ func main() {
 	}
 }
 
-// runDailyTickScheduler runs the Auto Exchange engine once every 24 hours
-// for the lifetime of the process, stopping when ctx is cancelled (the
-// same signal-derived context the HTTP server shuts down on) instead of
-// being killed mid-tick. Not distributed-safe (fine for a single-instance
-// MVP — see SKILL.md's Auto Exchange engine section); use
-// POST /internal/jobs/run-daily-tick to trigger a pass on demand instead of
-// waiting for real time to pass.
+// runDailyTickScheduler drives the Auto Exchange engine for the lifetime
+// of the process, stopping when ctx is cancelled (the same signal-derived
+// context the HTTP server shuts down on) instead of being killed mid-tick.
+//
+// It runs one pass immediately on startup, then re-checks every hour. It
+// deliberately does NOT use a single 24h time.Ticker: that ticker only
+// fires after 24h of *uninterrupted* process uptime and resets on every
+// restart, so on production — where a deploy recreates the container
+// several times a day — it essentially never fired and prices stopped
+// moving. RunDailyTick claims each calendar date in daily_tick_runs before
+// moving any price, so the startup pass and the hourly re-checks apply
+// exactly one -1%/+1% per day; the first tick of a new day lands within an
+// hour and overdue matches are swept about as promptly.
+//
+// Not distributed-safe (fine for the single-instance MVP — the per-day
+// claim would still keep two instances from double-moving, but they'd
+// race on match creation).
 func runDailyTickScheduler(ctx context.Context, exchange *service.ExchangeService) {
-	ticker := time.NewTicker(24 * time.Hour)
+	runTickSafely(ctx, exchange)
+
+	ticker := time.NewTicker(1 * time.Hour)
 	defer ticker.Stop()
 
 	for {

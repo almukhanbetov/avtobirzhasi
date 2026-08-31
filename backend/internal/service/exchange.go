@@ -52,24 +52,25 @@ type TickResult struct {
 	MatchesExpired  int `json:"matchesExpired"`
 }
 
-// RunDailyTick performs one full daily pass: price movement, then match
-// creation, then the expiry sweep. Each call applies one more day's worth
-// of ±1% movement — cadence (real 24h ticker vs. manual trigger) is the
-// caller's concern, not this method's.
+// RunDailyTick performs one full pass: the once-per-calendar-day price
+// movement, then match creation, then the expiry sweep.
+//
+// The price movement is idempotent per calendar day — it claims the
+// current date in daily_tick_runs before touching any price, so calling
+// RunDailyTick more than once on the same day (a container restart, the
+// scheduler's hourly re-check, a manual trigger) moves prices exactly
+// once. Match creation and the expiry sweep are naturally idempotent
+// (an already-frozen listing won't re-match; an already-expired match is
+// skipped) and run on every call.
 func (s *ExchangeService) RunDailyTick(ctx context.Context) (*TickResult, error) {
 	result := &TickResult{}
 
-	decayed, err := s.decayListingPrices(ctx)
+	moved, err := s.movePricesOncePerDay(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("decay listing prices: %w", err)
+		return nil, fmt.Errorf("daily price movement: %w", err)
 	}
-	result.ListingsDecayed = decayed
-
-	grown, err := s.growBuyerOffers(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("grow buyer offers: %w", err)
-	}
-	result.RequestsGrown = grown
+	result.ListingsDecayed = moved.listingsDecayed
+	result.RequestsGrown = moved.requestsGrown
 
 	matched, err := s.createMatches(ctx)
 	if err != nil {
@@ -86,34 +87,104 @@ func (s *ExchangeService) RunDailyTick(ctx context.Context) (*TickResult, error)
 	return result, nil
 }
 
+type dailyMoveResult struct {
+	alreadyRan      bool
+	listingsDecayed int
+	requestsGrown   int
+}
+
+// movePricesOncePerDay claims the current calendar date in
+// daily_tick_runs and, only when this call is the one that claimed it,
+// applies one day's -1% to active exchange listings and +1% to active
+// buyer offers — the claim, both updates and the price-history rows are a
+// single transaction, so a failure anywhere rolls the whole thing back
+// (no half-decayed prices, and the day stays unclaimed so the next tick
+// retries it).
+func (s *ExchangeService) movePricesOncePerDay(ctx context.Context) (dailyMoveResult, error) {
+	tx, err := s.db.Begin(ctx)
+	if err != nil {
+		return dailyMoveResult{}, err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	tag, err := tx.Exec(ctx,
+		`INSERT INTO daily_tick_runs (run_date) VALUES (current_date) ON CONFLICT (run_date) DO NOTHING`)
+	if err != nil {
+		return dailyMoveResult{}, err
+	}
+	if tag.RowsAffected() == 0 {
+		// Some earlier tick already moved prices for today.
+		return dailyMoveResult{alreadyRan: true}, tx.Commit(ctx)
+	}
+
+	decayed, err := decayListingPrices(ctx, tx)
+	if err != nil {
+		return dailyMoveResult{}, err
+	}
+	grown, err := growBuyerOffers(ctx, tx)
+	if err != nil {
+		return dailyMoveResult{}, err
+	}
+
+	if _, err := tx.Exec(ctx,
+		`UPDATE daily_tick_runs SET listings_decayed = $1, requests_grown = $2 WHERE run_date = current_date`,
+		decayed, grown,
+	); err != nil {
+		return dailyMoveResult{}, err
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return dailyMoveResult{}, err
+	}
+	return dailyMoveResult{listingsDecayed: decayed, requestsGrown: grown}, nil
+}
+
 // decayListingPrices applies the seller-side -1%/day to every active
-// exchange listing. GREATEST(1, ...) is a defensive floor so a listing
-// that somehow never matches can't decay to zero or negative over a very
-// long run — not part of the product spec, just a safety guard.
-func (s *ExchangeService) decayListingPrices(ctx context.Context) (int, error) {
-	// $1 MUST be cast explicitly. Left bare, Postgres infers its type from
-	// the neighboring untyped integer literal "1" and silently treats it
-	// as `integer`, truncating 0.01 to 0 — the update then "succeeds"
-	// (RowsAffected > 0) while leaving every price unchanged. No error is
-	// raised. Confirmed by hand while building this: without the cast,
-	// this query is a silent no-op.
-	tag, err := s.db.Exec(ctx, `
-		UPDATE listings
-		SET price = GREATEST(1, ROUND((price * (1 - $1::float8))::numeric)::bigint),
-		    updated_at = now()
-		WHERE is_exchange = true AND status = 'active'
-	`, dailyRate)
+// exchange listing in tx and writes one listing_price_history row per
+// listing that actually moved. Returns how many listings moved.
+// GREATEST(1, ...) is a defensive floor so a listing that somehow never
+// matches can't decay to zero or negative over a very long run.
+func decayListingPrices(ctx context.Context, tx pgx.Tx) (int, error) {
+	// $1 MUST be cast explicitly (::float8). Left bare, Postgres infers
+	// its type from the neighboring untyped integer literal "1" and
+	// silently treats it as `integer`, truncating 0.01 to 0 — the update
+	// then "succeeds" while leaving every price unchanged, no error
+	// raised. Confirmed by hand while building this.
+	var moved int
+	err := tx.QueryRow(ctx, `
+		WITH targets AS (
+			SELECT id,
+			       price AS previous_price,
+			       GREATEST(1, ROUND((price * (1 - $1::float8))::numeric)::bigint) AS new_price
+			FROM listings
+			WHERE is_exchange = true AND status = 'active'
+		),
+		moved AS (
+			UPDATE listings l
+			SET price = t.new_price, updated_at = now()
+			FROM targets t
+			WHERE l.id = t.id AND t.previous_price <> t.new_price
+			RETURNING l.id
+		),
+		logged AS (
+			INSERT INTO listing_price_history (listing_id, previous_price, new_price, reason)
+			SELECT id, previous_price, new_price, 'daily_decay'
+			FROM targets
+			WHERE previous_price <> new_price
+		)
+		SELECT count(*) FROM moved
+	`, dailyRate).Scan(&moved)
 	if err != nil {
 		return 0, err
 	}
-	return int(tag.RowsAffected()), nil
+	return moved, nil
 }
 
 // growBuyerOffers applies the buyer-side +1%/day to every active buyer
-// request.
-func (s *ExchangeService) growBuyerOffers(ctx context.Context) (int, error) {
+// request in tx.
+func growBuyerOffers(ctx context.Context, tx pgx.Tx) (int, error) {
 	// See decayListingPrices — same explicit ::float8 cast, same reason.
-	tag, err := s.db.Exec(ctx, `
+	tag, err := tx.Exec(ctx, `
 		UPDATE buyer_requests
 		SET current_offer = ROUND((current_offer * (1 + $1::float8))::numeric)::bigint,
 		    updated_at = now()

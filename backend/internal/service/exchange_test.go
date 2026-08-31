@@ -161,19 +161,15 @@ func TestExchangeService_DecayAndGrowApplyDailyRate(t *testing.T) {
 		Status: "active",
 	})
 
-	decayed, err := svc.decayListingPrices(ctx)
+	result, err := svc.RunDailyTick(ctx)
 	if err != nil {
-		t.Fatalf("decayListingPrices: %v", err)
+		t.Fatalf("RunDailyTick: %v", err)
 	}
-	if decayed != 1 {
-		t.Errorf("listings decayed = %d, want 1", decayed)
+	if result.ListingsDecayed != 1 {
+		t.Errorf("listings decayed = %d, want 1", result.ListingsDecayed)
 	}
-	grown, err := svc.growBuyerOffers(ctx)
-	if err != nil {
-		t.Fatalf("growBuyerOffers: %v", err)
-	}
-	if grown != 1 {
-		t.Errorf("requests grown = %d, want 1", grown)
+	if result.RequestsGrown != 1 {
+		t.Errorf("requests grown = %d, want 1", result.RequestsGrown)
 	}
 
 	var price, offer int64

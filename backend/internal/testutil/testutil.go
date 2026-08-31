@@ -101,6 +101,7 @@ func truncateAll(t *testing.T, pool *pgxpool.Pool) {
 	_, err := pool.Exec(context.Background(), `
 		TRUNCATE TABLE
 			notifications, deposits, matches, favorites,
+			listing_price_history, daily_tick_runs,
 			listing_images, buyer_requests, listings, users
 		RESTART IDENTITY CASCADE
 	`)
