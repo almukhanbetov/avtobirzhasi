@@ -95,8 +95,8 @@ type dailyMoveResult struct {
 
 // movePricesOncePerDay claims the current calendar date in
 // daily_tick_runs and, only when this call is the one that claimed it,
-// applies one day's -1% to active exchange listings and +1% to active
-// buyer offers — the claim, both updates and the price-history rows are a
+// applies one day's -1% to every active listing and +1% to every active
+// buyer offer — the claim, both updates and the price-history rows are a
 // single transaction, so a failure anywhere rolls the whole thing back
 // (no half-decayed prices, and the day stays unclaimed so the next tick
 // retries it).
@@ -139,11 +139,19 @@ func (s *ExchangeService) movePricesOncePerDay(ctx context.Context) (dailyMoveRe
 	return dailyMoveResult{listingsDecayed: decayed, requestsGrown: grown}, nil
 }
 
-// decayListingPrices applies the seller-side -1%/day to every active
-// exchange listing in tx and writes one listing_price_history row per
-// listing that actually moved. Returns how many listings moved.
-// GREATEST(1, ...) is a defensive floor so a listing that somehow never
-// matches can't decay to zero or negative over a very long run.
+// decayListingPrices applies the seller-side -1%/day to EVERY active
+// listing in tx — ordinary marketplace listings and Auto Exchange
+// listings alike — and writes one listing_price_history row per listing
+// that actually moved. Returns how many listings moved.
+//
+// The filter is status = 'active' only: 'frozen' (locked into a match at
+// the match's final_price), 'moderation' (not live yet) and 'archived'
+// (soft-deleted) never decay. is_exchange is deliberately NOT in the
+// filter — participating in the exchange/matching mechanism is not a
+// precondition for the daily price drop.
+//
+// GREATEST(1, ...) is a defensive floor so a listing that stays active
+// for a very long time can't decay to zero or negative.
 func decayListingPrices(ctx context.Context, tx pgx.Tx) (int, error) {
 	// $1 MUST be cast explicitly (::float8). Left bare, Postgres infers
 	// its type from the neighboring untyped integer literal "1" and
@@ -157,7 +165,7 @@ func decayListingPrices(ctx context.Context, tx pgx.Tx) (int, error) {
 			       price AS previous_price,
 			       GREATEST(1, ROUND((price * (1 - $1::float8))::numeric)::bigint) AS new_price
 			FROM listings
-			WHERE is_exchange = true AND status = 'active'
+			WHERE status = 'active'
 		),
 		moved AS (
 			UPDATE listings l

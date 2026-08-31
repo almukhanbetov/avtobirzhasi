@@ -28,22 +28,46 @@ func listingPrice(t *testing.T, pool *pgxpool.Pool, id string) int64 {
 	return p
 }
 
-// 1. An active seller exchange listing loses exactly 1% on one daily tick.
-func TestDailyTick_ActiveExchangeListing_DecaysOnePercent(t *testing.T) {
+// A + B + F: every active listing loses exactly 1% on one daily tick —
+// an ordinary marketplace listing and an Auto Exchange listing alike —
+// and each records one daily_decay history row.
+func TestDailyTick_EveryActiveListing_DecaysOnePercent(t *testing.T) {
 	pool := testutil.SetupDB(t)
 	svc := NewExchangeService(pool, NewMockPaymentProvider())
 	uid := testutil.InsertUser(t, pool, "+77025000001")
-	id := testutil.InsertListing(t, pool, testutil.ListingFixture{
-		UserID: uid, Make: "Toyota", Model: "TickCar", Region: "Алматы",
+
+	normal := testutil.InsertListing(t, pool, testutil.ListingFixture{
+		UserID: uid, Make: "Toyota", Model: "NormalCar", Region: "Алматы",
+		Year: 2021, Price: 10_000_000, IsExchange: false, Status: "active",
+	})
+	exchange := testutil.InsertListing(t, pool, testutil.ListingFixture{
+		UserID: uid, Make: "Toyota", Model: "ExchangeCar", Region: "Алматы",
 		Year: 2021, Price: 10_000_000, IsExchange: true, Status: "active",
 	})
 
-	if _, err := svc.RunDailyTick(context.Background()); err != nil {
+	res, err := svc.RunDailyTick(context.Background())
+	if err != nil {
 		t.Fatalf("RunDailyTick: %v", err)
 	}
+	if res.ListingsDecayed != 2 {
+		t.Errorf("ListingsDecayed = %d, want 2 (normal + exchange)", res.ListingsDecayed)
+	}
 
-	if got := listingPrice(t, pool, id); got != 9_900_000 {
-		t.Errorf("price after one tick = %d, want 9900000 (10000000 * 0.99)", got)
+	for name, id := range map[string]string{"normal": normal, "exchange": exchange} {
+		if got := listingPrice(t, pool, id); got != 9_900_000 {
+			t.Errorf("%s active listing price after one tick = %d, want 9900000 (10000000 * 0.99)", name, got)
+		}
+		var prev, next int64
+		var reason string
+		err := pool.QueryRow(context.Background(), `
+			SELECT previous_price, new_price, reason FROM listing_price_history WHERE listing_id = $1
+		`, id).Scan(&prev, &next, &reason)
+		if err != nil {
+			t.Fatalf("%s: no price-history row: %v", name, err)
+		}
+		if prev != 10_000_000 || next != 9_900_000 || reason != "daily_decay" {
+			t.Errorf("%s history = (%d -> %d, %q), want (10000000 -> 9900000, daily_decay)", name, prev, next, reason)
+		}
 	}
 }
 
@@ -110,8 +134,11 @@ func TestDailyTick_NextDay_DecaysAgain(t *testing.T) {
 	}
 }
 
-// 4. Non-active / non-exchange listings never decay.
-func TestDailyTick_SkipsListingsThatMustNotDecay(t *testing.T) {
+// E: only status = 'active' decays. The status model is
+// active/frozen/moderation/archived (migrations/00002) — there is no
+// 'sold'/'expired'/'inactive'; frozen is "locked into a match", moderation
+// is "not live yet", archived is "soft-deleted". None of those move.
+func TestDailyTick_OnlyActiveStatusDecays(t *testing.T) {
 	pool := testutil.SetupDB(t)
 	svc := NewExchangeService(pool, NewMockPaymentProvider())
 	uid := testutil.InsertUser(t, pool, "+77025000004")
@@ -122,25 +149,31 @@ func TestDailyTick_SkipsListingsThatMustNotDecay(t *testing.T) {
 			Year: 2020, Price: 5_000_000, IsExchange: isExchange, Status: status,
 		})
 	}
-	activeExchange := mk("active", true) // the only one that should move
-	classified := mk("active", false)    // not an exchange listing
-	moderation := mk("moderation", true) // not approved yet
-	frozen := mk("frozen", true)         // in a match
-	archived := mk("archived", true)     // deleted
+	activeNormal := mk("active", false)   // decays
+	activeExchange := mk("active", true)  // decays
+	moderation := mk("moderation", false) // not live yet — unchanged
+	frozen := mk("frozen", true)          // locked into a match — unchanged
+	archived := mk("archived", false)     // soft-deleted — unchanged
 
 	if _, err := svc.RunDailyTick(context.Background()); err != nil {
 		t.Fatalf("RunDailyTick: %v", err)
 	}
 
-	if got := listingPrice(t, pool, activeExchange); got != 4_950_000 {
-		t.Errorf("active exchange listing price = %d, want 4950000", got)
+	for name, id := range map[string]string{"activeNormal": activeNormal, "activeExchange": activeExchange} {
+		if got := listingPrice(t, pool, id); got != 4_950_000 {
+			t.Errorf("%s price = %d, want 4950000 (decayed)", name, got)
+		}
 	}
 	for name, id := range map[string]string{
-		"classified": classified, "moderation": moderation,
-		"frozen": frozen, "archived": archived,
+		"moderation": moderation, "frozen": frozen, "archived": archived,
 	} {
 		if got := listingPrice(t, pool, id); got != 5_000_000 {
-			t.Errorf("%s listing price = %d, want unchanged 5000000", name, got)
+			t.Errorf("%s price = %d, want unchanged 5000000", name, got)
+		}
+		var n int
+		pool.QueryRow(context.Background(), `SELECT count(*) FROM listing_price_history WHERE listing_id = $1`, id).Scan(&n)
+		if n != 0 {
+			t.Errorf("%s has %d price-history rows, want 0", name, n)
 		}
 	}
 }
