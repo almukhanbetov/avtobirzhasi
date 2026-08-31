@@ -144,6 +144,52 @@ type updateListingRequest struct {
 	Images        *[]string `json:"images" binding:"omitempty,min=1,max=10,dive,url"`
 }
 
+// buildListingFieldUpdate maps a partial updateListingRequest onto the
+// column set (+ optional price-history edit) that
+// ListingRepository.UpdateListing takes. Shared by the owner
+// (PATCH /api/listings/:id) and admin (PATCH /api/admin/listings/:id)
+// edit paths so both apply the exact same field rules. The caller is
+// responsible for the is_exchange price guard and for the images slice.
+func buildListingFieldUpdate(listing *models.Listing, req updateListingRequest) (map[string]any, *repository.PriceEdit) {
+	fields := map[string]any{}
+	setStr := func(col string, v *string) {
+		if v != nil {
+			fields[col] = *v
+		}
+	}
+	setStr("make", req.Make)
+	setStr("model", req.Model)
+	setStr("region", req.Region)
+	setStr("transmission", req.Transmission)
+	setStr("fuel_type", req.FuelType)
+	setStr("body_type", req.BodyType)
+	setStr("drivetrain", req.Drivetrain)
+	setStr("color", req.Color)
+	setStr("steering_wheel", req.SteeringWheel)
+	setStr("description", req.Description)
+	if req.Year != nil {
+		fields["year"] = *req.Year
+	}
+	if req.MileageKm != nil {
+		fields["mileage_km"] = *req.MileageKm
+	}
+	if req.EngineVolume != nil {
+		fields["engine_volume"] = *req.EngineVolume
+	}
+	if req.EnginePower != nil {
+		fields["engine_power"] = *req.EnginePower
+	}
+
+	var priceEdit *repository.PriceEdit
+	if req.Price != nil {
+		fields["price"] = *req.Price
+		if *req.Price != listing.Price {
+			priceEdit = &repository.PriceEdit{From: listing.Price, To: *req.Price}
+		}
+	}
+	return fields, priceEdit
+}
+
 // loadOwnedListing loads a listing and verifies the authenticated user
 // owns it, writing the appropriate error response and returning ok=false
 // if not.
@@ -196,42 +242,7 @@ func (h *ListingsHandler) Update(c *gin.Context) {
 		return
 	}
 
-	fields := map[string]any{}
-	setStr := func(col string, v *string) {
-		if v != nil {
-			fields[col] = *v
-		}
-	}
-	setStr("make", req.Make)
-	setStr("model", req.Model)
-	setStr("region", req.Region)
-	setStr("transmission", req.Transmission)
-	setStr("fuel_type", req.FuelType)
-	setStr("body_type", req.BodyType)
-	setStr("drivetrain", req.Drivetrain)
-	setStr("color", req.Color)
-	setStr("steering_wheel", req.SteeringWheel)
-	setStr("description", req.Description)
-	if req.Year != nil {
-		fields["year"] = *req.Year
-	}
-	if req.MileageKm != nil {
-		fields["mileage_km"] = *req.MileageKm
-	}
-	if req.EngineVolume != nil {
-		fields["engine_volume"] = *req.EngineVolume
-	}
-	if req.EnginePower != nil {
-		fields["engine_power"] = *req.EnginePower
-	}
-
-	var priceEdit *repository.PriceEdit
-	if req.Price != nil {
-		fields["price"] = *req.Price
-		if *req.Price != listing.Price {
-			priceEdit = &repository.PriceEdit{From: listing.Price, To: *req.Price}
-		}
-	}
+	fields, priceEdit := buildListingFieldUpdate(listing, req)
 
 	if len(fields) == 0 && req.Images == nil {
 		c.JSON(http.StatusOK, toCarResponse(*listing))

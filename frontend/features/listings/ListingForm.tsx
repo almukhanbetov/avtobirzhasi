@@ -17,6 +17,7 @@ import {
 } from "@/lib/validation/listing";
 import { createListing, updateListing } from "@/lib/api/listings";
 import type { UpdateListingInput } from "@/lib/api/listings";
+import { updateAdminListing } from "@/lib/api/admin";
 import type { SellerListing } from "@/types/dashboard";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -36,9 +37,14 @@ const TOTAL_STEPS = 3;
 export function ListingForm({
   mode = "create",
   listing,
+  admin = false,
 }: {
   mode?: "create" | "edit";
   listing?: SellerListing;
+  // When true the edit submits through the admin endpoint
+  // (updateAdminListing) and returns to /admin/listings — the form,
+  // fields, photo drag-and-drop and validation are otherwise identical.
+  admin?: boolean;
 } = {}) {
   const router = useRouter();
   const { lang, t } = useLanguage();
@@ -46,6 +52,7 @@ export function ListingForm({
   const queryClient = useQueryClient();
   const isEdit = mode === "edit" && !!listing;
   const priceLocked = isEdit && !!listing?.car.isExchange;
+  const listBackHref = admin ? "/admin/listings" : "/dashboard/listings";
   const [step, setStep] = useState(1);
   const [apiError, setApiError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -110,12 +117,18 @@ export function ListingForm({
       if (isEdit && listing) {
         const payload: UpdateListingInput = { ...rest, images: imageUrls };
         if (priceLocked) delete payload.price; // exchange price is engine-managed
-        await updateListing(token as string, listing.id, payload);
-        await queryClient.invalidateQueries({ queryKey: ["dashboard", "listings"] });
-        await queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+        if (admin) {
+          await updateAdminListing(token as string, listing.id, payload);
+          await queryClient.invalidateQueries({ queryKey: ["admin", "listings"] });
+          await queryClient.invalidateQueries({ queryKey: ["admin", "listing", listing.id] });
+        } else {
+          await updateListing(token as string, listing.id, payload);
+          await queryClient.invalidateQueries({ queryKey: ["dashboard", "listings"] });
+          await queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+        }
         setSaved(true);
         await new Promise((resolve) => setTimeout(resolve, 700));
-        router.push("/dashboard/listings");
+        router.push(listBackHref);
         return;
       }
 
@@ -386,7 +399,7 @@ export function ListingForm({
             <Button
               type="button"
               variant="secondary"
-              onClick={() => router.push("/dashboard/listings")}
+              onClick={() => router.push(listBackHref)}
               disabled={isSubmitting}
             >
               {t("listingForm.cancel")}

@@ -30,6 +30,8 @@ func NewAdminListingsHandler(listings *repository.ListingRepository, users *repo
 // middleware.AdminOnly().
 func RegisterAdminListingsRoutes(router *gin.RouterGroup, h *AdminListingsHandler) {
 	router.GET("/listings", h.List)
+	router.GET("/listings/:id", h.Get)
+	router.PATCH("/listings/:id", h.Update)
 	router.POST("/listings/:id/archive", h.Archive)
 }
 
@@ -68,6 +70,90 @@ func (h *AdminListingsHandler) List(c *gin.Context) {
 		"totalPages": totalPages(total, adminPageSize),
 		"page":       page,
 	})
+}
+
+// Get handles GET /api/admin/listings/:id — one listing regardless of
+// owner or status, in the same {id, car, status, updatedAt, sellerName}
+// shape as a row of List, so the admin edit page can prefill its form.
+func (h *AdminListingsHandler) Get(c *gin.Context) {
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	listing, err := h.listings.GetByID(c.Request.Context(), id)
+	if errors.Is(err, repository.ErrNotFound) {
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "Объявление не найдено")
+		return
+	}
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить объявление")
+		return
+	}
+
+	sellerName := ""
+	if user, err := h.users.FindByID(c.Request.Context(), listing.UserID); err == nil {
+		sellerName = user.Name
+	}
+	c.JSON(http.StatusOK, adminListingResponse{
+		sellerListingResponse: toSellerListingResponse(*listing),
+		SellerName:            sellerName,
+	})
+}
+
+// Update handles PATCH /api/admin/listings/:id — an admin edits any
+// listing regardless of owner. Same partial updateListingRequest DTO,
+// same field rules, and same 'manual_edit' price-history behaviour as the
+// owner's PATCH /api/listings/:id (buildListingFieldUpdate is shared);
+// the only differences are no ownership check and the admin-role gate on
+// the /api/admin group. System columns stay unbindable.
+func (h *AdminListingsHandler) Update(c *gin.Context) {
+	id, ok := requireUUIDParam(c, "id")
+	if !ok {
+		return
+	}
+
+	listing, err := h.listings.GetByID(c.Request.Context(), id)
+	if errors.Is(err, repository.ErrNotFound) {
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "Объявление не найдено")
+		return
+	}
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить объявление")
+		return
+	}
+
+	var req updateListingRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", "Проверьте правильность заполнения полей объявления")
+		return
+	}
+
+	// Auto Exchange listings move only via the daily ±1% engine — a direct
+	// price edit (even by an admin) would bypass the fairness mechanic.
+	if req.Price != nil && listing.IsExchange {
+		respondError(c, http.StatusConflict, "EXCHANGE_MANAGED_FIELD", "Цена управляется автообменом и не может быть изменена вручную")
+		return
+	}
+
+	fields, priceEdit := buildListingFieldUpdate(listing, req)
+
+	if len(fields) == 0 && req.Images == nil {
+		c.JSON(http.StatusOK, toCarResponse(*listing))
+		return
+	}
+
+	if err := h.listings.UpdateListing(c.Request.Context(), id, fields, req.Images, priceEdit); err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обновить объявление")
+		return
+	}
+
+	updated, err := h.listings.GetByID(c.Request.Context(), id)
+	if err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обновить объявление")
+		return
+	}
+	c.JSON(http.StatusOK, toCarResponse(*updated))
 }
 
 // Archive handles POST /api/admin/listings/:id/archive — force-archives

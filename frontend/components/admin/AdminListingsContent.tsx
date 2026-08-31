@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -121,14 +122,22 @@ export function AdminListingsContent() {
                     <span className="text-[16px] font-semibold text-foreground">
                       {formatTenge(listing.car.price)}
                     </span>
-                    <Button
-                      variant="secondary"
-                      size="md"
-                      onClick={() => handleArchive(listing.id)}
-                      disabled={isArchiving || listing.status === "archived"}
-                    >
-                      {isArchiving ? t("admin.listings.archiving") : t("admin.listings.archive")}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={`/admin/listings/${listing.id}/edit`}
+                        className="inline-flex h-10 items-center rounded-xl border border-border bg-surface px-4 text-[14px] font-semibold text-foreground transition-colors hover:border-foreground/30"
+                      >
+                        {t("admin.listings.edit")}
+                      </Link>
+                      <Button
+                        variant="secondary"
+                        size="md"
+                        onClick={() => handleArchive(listing.id)}
+                        disabled={isArchiving || listing.status === "archived"}
+                      >
+                        {isArchiving ? t("admin.listings.archiving") : t("admin.listings.archive")}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, createEvent } from "@testing-library/react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { LanguageProvider } from "@/lib/i18n/LanguageProvider";
 import type { ListingFormValues } from "@/lib/validation/listing";
@@ -210,6 +210,19 @@ describe("ImageUploadField — drag & drop", () => {
 
     expect(clickSpy).toHaveBeenCalledTimes(1);
     clickSpy.mockRestore();
+  });
+
+  it("calls preventDefault on dragOver and drop so the browser never opens the file", () => {
+    vi.mocked(uploadListingImages).mockResolvedValue([]);
+    render(<Harness />);
+
+    const overEvent = createEvent.dragOver(dropzone(), dt([pngFile()]));
+    fireEvent(dropzone(), overEvent);
+    expect(overEvent.defaultPrevented).toBe(true);
+
+    const dropEvent = createEvent.drop(dropzone(), dt([pngFile()]));
+    fireEvent(dropzone(), dropEvent);
+    expect(dropEvent.defaultPrevented).toBe(true);
   });
 
   it("the file input and the dropzone route through one shared handler", async () => {

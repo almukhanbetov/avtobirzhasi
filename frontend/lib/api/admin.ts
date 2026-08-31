@@ -1,4 +1,6 @@
 import { apiFetch } from "@/lib/api/client";
+import type { UpdateListingInput } from "@/lib/api/listings";
+import type { Car } from "@/types/car";
 import type {
   AdminBuyerRequest,
   AdminDeposit,
@@ -59,6 +61,21 @@ export function listAdminListings(
   if (params.page) query.set("page", String(params.page));
   const qs = query.toString();
   return apiFetch<AdminPage<AdminListing>>(`/admin/listings${qs ? `?${qs}` : ""}`, { token });
+}
+
+export function getAdminListing(token: string, id: string): Promise<AdminListing> {
+  return apiFetch<AdminListing>(`/admin/listings/${id}`, { token });
+}
+
+// The admin counterpart of updateListing (lib/api/listings.ts) — same
+// partial UpdateListingInput body and the same backend field rules, just
+// on the admin-role /api/admin/listings/:id route (no ownership check).
+export function updateAdminListing(
+  token: string,
+  id: string,
+  input: UpdateListingInput,
+): Promise<Car> {
+  return apiFetch<Car>(`/admin/listings/${id}`, { method: "PATCH", token, body: input });
 }
 
 export function archiveAdminListing(token: string, id: string): Promise<void> {
