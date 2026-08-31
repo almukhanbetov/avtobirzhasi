@@ -535,6 +535,11 @@ export const translations = {
     "listingForm.addPhoto": "Добавить фото",
     "listingForm.photoHint": "JPG, PNG или WebP, до 5 МБ, максимум 10 фото",
     "listingForm.uploadingPhotos": "Загрузка…",
+    "listingForm.dropzoneTitle": "Перетащите фотографии сюда",
+    "listingForm.dropzoneSubtitle": "или нажмите, чтобы выбрать файлы",
+    "listingForm.dropzoneActive": "Отпустите фотографии здесь",
+    "listingForm.dropzoneAria":
+      "Загрузка фотографий: перетащите файлы сюда или нажмите, чтобы выбрать",
     "listingForm.photoTypeError": "Поддерживаются только JPG, PNG и WebP",
     "listingForm.photoSizeError": "Каждое фото должно быть не больше 5 МБ",
     "listingForm.photoCountError": "Можно добавить не больше 10 фотографий",
@@ -1107,6 +1112,11 @@ export const translations = {
     "listingForm.addPhoto": "Фото қосу",
     "listingForm.photoHint": "JPG, PNG немесе WebP, 5 МБ дейін, ең көбі 10 фото",
     "listingForm.uploadingPhotos": "Жүктелуде…",
+    "listingForm.dropzoneTitle": "Фотосуреттерді осында сүйреп апарыңыз",
+    "listingForm.dropzoneSubtitle": "немесе файлдарды таңдау үшін басыңыз",
+    "listingForm.dropzoneActive": "Фотосуреттерді осында жіберіңіз",
+    "listingForm.dropzoneAria":
+      "Фотосуреттерді жүктеу: файлдарды осында сүйреп апарыңыз немесе таңдау үшін басыңыз",
     "listingForm.photoTypeError": "Тек JPG, PNG және WebP қолдау көрсетіледі",
     "listingForm.photoSizeError": "Әр фото 5 МБ-тан аспауы керек",
     "listingForm.photoCountError": "10 фотосуреттен артық қосуға болмайды",

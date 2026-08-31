@@ -103,3 +103,128 @@ describe("ImageUploadField", () => {
     expect(screen.getByTestId("count").textContent).toBe("0");
   });
 });
+
+describe("ImageUploadField — drag & drop", () => {
+  function dropzone(): HTMLElement {
+    return screen.getByRole("button", { name: /Загрузка фотографий/i });
+  }
+  const dt = (files: File[]) => ({ dataTransfer: { files, dropEffect: "" } });
+
+  it("dragOver / dragEnter switches the zone to the active state", () => {
+    render(<Harness />);
+    expect(screen.getByText("Перетащите фотографии сюда")).toBeTruthy();
+
+    fireEvent.dragEnter(dropzone(), dt([pngFile()]));
+    fireEvent.dragOver(dropzone(), dt([pngFile()]));
+
+    expect(screen.getByText("Отпустите фотографии здесь")).toBeTruthy();
+    expect(screen.queryByText("Перетащите фотографии сюда")).toBeNull();
+  });
+
+  it("dragLeave restores the normal state", () => {
+    render(<Harness />);
+    fireEvent.dragEnter(dropzone(), dt([pngFile()]));
+    expect(screen.getByText("Отпустите фотографии здесь")).toBeTruthy();
+
+    fireEvent.dragLeave(dropzone(), dt([pngFile()]));
+
+    expect(screen.getByText("Перетащите фотографии сюда")).toBeTruthy();
+    expect(screen.queryByText("Отпустите фотографии здесь")).toBeNull();
+  });
+
+  it("drop feeds a single valid file into the same upload flow", async () => {
+    vi.mocked(uploadListingImages).mockResolvedValue([
+      "http://localhost:8080/uploads/dropped.png",
+    ]);
+    render(<Harness />);
+
+    fireEvent.drop(dropzone(), dt([pngFile("dropped.png")]));
+
+    await waitFor(() =>
+      expect(uploadListingImages).toHaveBeenCalledWith("user-token", [
+        expect.any(File),
+      ]),
+    );
+    await waitFor(() => expect(screen.getByTestId("count").textContent).toBe("1"));
+  });
+
+  it("drop accepts multiple valid files in one upload request", async () => {
+    vi.mocked(uploadListingImages).mockResolvedValue([
+      "http://localhost:8080/uploads/a.jpg",
+      "http://localhost:8080/uploads/b.webp",
+      "http://localhost:8080/uploads/c.png",
+    ]);
+    render(<Harness />);
+
+    fireEvent.drop(
+      dropzone(),
+      dt([
+        new File([new Uint8Array(4)], "a.jpg", { type: "image/jpeg" }),
+        new File([new Uint8Array(4)], "b.webp", { type: "image/webp" }),
+        pngFile("c.png"),
+      ]),
+    );
+
+    await waitFor(() => expect(uploadListingImages).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(uploadListingImages).mock.calls[0][1]).toHaveLength(3);
+    await waitFor(() => expect(screen.getByTestId("count").textContent).toBe("3"));
+  });
+
+  it("drop rejects an unsupported type without uploading", async () => {
+    render(<Harness />);
+
+    fireEvent.drop(
+      dropzone(),
+      dt([new File(["x"], "movie.mp4", { type: "video/mp4" })]),
+    );
+
+    expect(await screen.findByText(/только JPG, PNG и WebP/i)).toBeTruthy();
+    expect(uploadListingImages).not.toHaveBeenCalled();
+  });
+
+  it("drop respects the max-images limit and uploads nothing over it", async () => {
+    render(<Harness />);
+
+    const eleven = Array.from({ length: 11 }, (_, i) => pngFile(`p${i}.png`));
+    fireEvent.drop(dropzone(), dt(eleven));
+
+    expect(await screen.findByText(/не больше 10 фотографий/i)).toBeTruthy();
+    expect(uploadListingImages).not.toHaveBeenCalled();
+  });
+
+  it("clicking the dropzone opens the hidden file input", () => {
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click");
+    render(<Harness />);
+
+    fireEvent.click(dropzone());
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    clickSpy.mockRestore();
+  });
+
+  it("Enter on the focused dropzone opens the hidden file input (a11y)", () => {
+    const clickSpy = vi.spyOn(HTMLInputElement.prototype, "click");
+    render(<Harness />);
+
+    fireEvent.keyDown(dropzone(), { key: "Enter" });
+
+    expect(clickSpy).toHaveBeenCalledTimes(1);
+    clickSpy.mockRestore();
+  });
+
+  it("the file input and the dropzone route through one shared handler", async () => {
+    vi.mocked(uploadListingImages).mockResolvedValue([
+      "http://localhost:8080/uploads/x.png",
+    ]);
+    render(<Harness />);
+
+    fireEvent.change(fileInput(), { target: { files: [pngFile("via-input.png")] } });
+    await waitFor(() => expect(uploadListingImages).toHaveBeenCalledTimes(1));
+
+    fireEvent.drop(dropzone(), dt([pngFile("via-drop.png")]));
+    await waitFor(() => expect(uploadListingImages).toHaveBeenCalledTimes(2));
+    // same function, same call shape from both entry points
+    expect(vi.mocked(uploadListingImages).mock.calls[0][1]).toHaveLength(1);
+    expect(vi.mocked(uploadListingImages).mock.calls[1][1]).toHaveLength(1);
+  });
+});
