@@ -77,6 +77,8 @@ export const translations = {
 
     "row.updated": "Обновлено",
     "row.open": "Открыть",
+    "row.actions": "Действия",
+    "row.editListing": "Редактировать",
     "row.pay": "Оплатить",
     "row.paying": "Оплата…",
     "row.details": "Подробнее",
@@ -550,6 +552,12 @@ export const translations = {
     "listingForm.publishing": "Публикуем…",
     "listingForm.publish": "Опубликовать объявление",
     "listingForm.createError": "Не удалось создать объявление, попробуйте позже",
+    "listingForm.editTitle": "Редактировать объявление",
+    "listingForm.saveChanges": "Сохранить изменения",
+    "listingForm.saving": "Сохраняем…",
+    "listingForm.cancel": "Отмена",
+    "listingForm.saved": "Изменения сохранены",
+    "listingForm.editError": "Не удалось сохранить изменения",
 
     "sellNew.description":
       "Заполните данные об автомобиле — объявление появится после модерации.",
@@ -653,6 +661,8 @@ export const translations = {
 
     "row.updated": "Жаңартылды",
     "row.open": "Ашу",
+    "row.actions": "Әрекеттер",
+    "row.editListing": "Өңдеу",
     "row.pay": "Төлеу",
     "row.paying": "Төлену…",
     "row.details": "Толығырақ",
@@ -1127,6 +1137,12 @@ export const translations = {
     "listingForm.publishing": "Жариялаудамыз…",
     "listingForm.publish": "Хабарландыруды жариялау",
     "listingForm.createError": "Хабарландыру жасау мүмкін болмады, кейінірек көріңіз",
+    "listingForm.editTitle": "Хабарландыруды өңдеу",
+    "listingForm.saveChanges": "Өзгерістерді сақтау",
+    "listingForm.saving": "Сақталуда…",
+    "listingForm.cancel": "Болдырмау",
+    "listingForm.saved": "Өзгерістер сақталды",
+    "listingForm.editError": "Өзгерістерді сақтау мүмкін болмады",
 
     "sellNew.description":
       "Автокөлік туралы деректерді толтырыңыз — хабарландыру модерациядан кейін пайда болады.",

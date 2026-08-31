@@ -34,12 +34,26 @@ export function createListing(token: string, input: CreateListingInput): Promise
   });
 }
 
+// The owner-editable subset of a listing (partial update — every field
+// optional). Mirrors the backend's updateListingRequest. System columns
+// (status, is_exchange, user_id, …) are intentionally not here.
 export interface UpdateListingInput {
+  make?: string;
+  model?: string;
+  year?: number;
   price?: number;
   mileageKm?: number;
-  description?: string;
   region?: string;
+  transmission?: string;
+  fuelType?: string;
+  bodyType?: string;
+  drivetrain?: string;
+  engineVolume?: number;
+  enginePower?: number;
   color?: string;
+  steeringWheel?: string;
+  description?: string;
+  images?: string[];
 }
 
 export function updateListing(

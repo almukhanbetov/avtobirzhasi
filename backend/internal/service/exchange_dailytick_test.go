@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"avtobirzhasi/backend/internal/repository"
 	"avtobirzhasi/backend/internal/testutil"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -269,5 +270,54 @@ func TestDailyTick_DbErrorLeavesNoPartialUpdate(t *testing.T) {
 	}
 	if got := listingPrice(t, pool, id); got != 9_900_000 {
 		t.Errorf("price after recovery tick = %d, want 9900000", got)
+	}
+}
+
+// After the owner manually edits the price, the daily -1% engine picks up
+// from the NEW price and no extra decay happens at save time.
+func TestDailyTick_DecaysFromOwnerEditedPrice(t *testing.T) {
+	pool := testutil.SetupDB(t)
+	svc := NewExchangeService(pool, NewMockPaymentProvider())
+	listingRepo := repository.NewListingRepository(repository.New(pool))
+
+	uid := testutil.InsertUser(t, pool, "+77025000007")
+	id := testutil.InsertListing(t, pool, testutil.ListingFixture{
+		UserID: uid, Make: "Toyota", Model: "EditedCar", Region: "Алматы",
+		Year: 2021, Price: 8_000_000, IsExchange: false, Status: "active",
+	})
+
+	// Owner edits the price up to 12,000,000 (same path the PATCH handler uses).
+	if err := listingRepo.UpdateListing(context.Background(), id,
+		map[string]any{"price": int64(12_000_000)}, nil,
+		&repository.PriceEdit{From: 8_000_000, To: 12_000_000},
+	); err != nil {
+		t.Fatalf("owner price edit: %v", err)
+	}
+	if got := listingPrice(t, pool, id); got != 12_000_000 {
+		t.Fatalf("price right after edit = %d, want 12000000 (no decay at save time)", got)
+	}
+
+	if _, err := svc.RunDailyTick(context.Background()); err != nil {
+		t.Fatalf("RunDailyTick: %v", err)
+	}
+	if got := listingPrice(t, pool, id); got != 11_880_000 {
+		t.Errorf("price after the next tick = %d, want 11880000 (12000000 * 0.99)", got)
+	}
+
+	// history: one manual_edit, then one daily_decay from the edited price
+	rows, _ := pool.Query(context.Background(),
+		`SELECT previous_price, new_price, reason FROM listing_price_history WHERE listing_id = $1 ORDER BY changed_at`, id)
+	defer rows.Close()
+	var got [][3]any
+	for rows.Next() {
+		var p, n int64
+		var r string
+		rows.Scan(&p, &n, &r)
+		got = append(got, [3]any{p, n, r})
+	}
+	if len(got) != 2 ||
+		got[0] != [3]any{int64(8_000_000), int64(12_000_000), "manual_edit"} ||
+		got[1] != [3]any{int64(12_000_000), int64(11_880_000), "daily_decay"} {
+		t.Errorf("history = %v, want [(8M->12M manual_edit) (12M->11.88M daily_decay)]", got)
 	}
 }

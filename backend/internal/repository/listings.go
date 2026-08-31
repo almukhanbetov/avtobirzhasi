@@ -251,15 +251,40 @@ func (r *ListingRepository) AddImage(ctx context.Context, listingID, url string,
 	return err
 }
 
-// Update sets the given columns on a listing and bumps updated_at. Keys in
-// fields must be literal, handler-controlled column names — never derived
-// from raw user input — since they are interpolated directly into the SQL
-// text (values remain fully parameterized).
-func (r *ListingRepository) Update(ctx context.Context, id string, fields map[string]any) error {
-	if len(fields) == 0 {
+// PriceEdit records an owner-initiated price change so UpdateListing can
+// write the listing_price_history row in the same transaction as the
+// UPDATE. From/To are whole tenge.
+type PriceEdit struct {
+	From int64
+	To   int64
+}
+
+// UpdateListing applies an owner's edit to a listing atomically: the
+// column updates, a full replacement of its gallery images (when images
+// is non-nil), and a 'manual_edit' price-history row (when priceEdit is
+// non-nil) all commit together or not at all.
+//
+// Keys in fields must be literal, handler-controlled column names — never
+// derived from raw user input — since they are interpolated into the SQL
+// text (values stay fully parameterized).
+func (r *ListingRepository) UpdateListing(
+	ctx context.Context,
+	id string,
+	fields map[string]any,
+	images *[]string,
+	priceEdit *PriceEdit,
+) error {
+	if len(fields) == 0 && images == nil {
 		return nil
 	}
 
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	// Column updates (or at least a updated_at bump when only images change).
 	sets := make([]string, 0, len(fields)+1)
 	args := make([]any, 0, len(fields)+1)
 	i := 1
@@ -270,10 +295,38 @@ func (r *ListingRepository) Update(ctx context.Context, id string, fields map[st
 	}
 	sets = append(sets, "updated_at = now()")
 	args = append(args, id)
+	if _, err := tx.Exec(ctx,
+		fmt.Sprintf("UPDATE listings SET %s WHERE id = $%d", strings.Join(sets, ", "), i),
+		args...,
+	); err != nil {
+		return err
+	}
 
-	query := fmt.Sprintf("UPDATE listings SET %s WHERE id = $%d", strings.Join(sets, ", "), i)
-	_, err := r.db.Exec(ctx, query, args...)
-	return err
+	if images != nil {
+		if _, err := tx.Exec(ctx, `DELETE FROM listing_images WHERE listing_id = $1`, id); err != nil {
+			return err
+		}
+		for pos, url := range *images {
+			if _, err := tx.Exec(ctx,
+				`INSERT INTO listing_images (listing_id, url, position) VALUES ($1, $2, $3)`,
+				id, url, pos,
+			); err != nil {
+				return err
+			}
+		}
+	}
+
+	if priceEdit != nil {
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO listing_price_history (listing_id, previous_price, new_price, reason)
+			 VALUES ($1, $2, $3, 'manual_edit')`,
+			id, priceEdit.From, priceEdit.To,
+		); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit(ctx)
 }
 
 // SetStatus transitions a listing's status (e.g. to "archived" for a soft

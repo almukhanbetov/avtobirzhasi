@@ -15,7 +15,9 @@ import {
   listingStepFields,
   type ListingFormValues,
 } from "@/lib/validation/listing";
-import { createListing } from "@/lib/api/listings";
+import { createListing, updateListing } from "@/lib/api/listings";
+import type { UpdateListingInput } from "@/lib/api/listings";
+import type { SellerListing } from "@/types/dashboard";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { makes, regions } from "@/lib/mock/cars";
@@ -31,13 +33,22 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 const TOTAL_STEPS = 3;
 
-export function ListingForm() {
+export function ListingForm({
+  mode = "create",
+  listing,
+}: {
+  mode?: "create" | "edit";
+  listing?: SellerListing;
+} = {}) {
   const router = useRouter();
   const { lang, t } = useLanguage();
   const { token } = useAuth();
   const queryClient = useQueryClient();
+  const isEdit = mode === "edit" && !!listing;
+  const priceLocked = isEdit && !!listing?.car.isExchange;
   const [step, setStep] = useState(1);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
 
   const {
     register,
@@ -48,12 +59,33 @@ export function ListingForm() {
     formState: { errors, isSubmitting },
   } = useForm<ListingFormValues>({
     resolver: zodResolver(listingSchema),
-    defaultValues: {
-      steeringWheel: "left",
-      mileageKm: 0,
-      images: [],
-      saleMode: "classified",
-    },
+    defaultValues:
+      isEdit && listing
+        ? {
+            make: listing.car.make,
+            model: listing.car.model,
+            year: listing.car.year,
+            mileageKm: listing.car.mileageKm,
+            region: listing.car.region,
+            transmission: listing.car.transmission,
+            fuelType: listing.car.fuelType,
+            bodyType: listing.car.bodyType,
+            drivetrain: listing.car.drivetrain,
+            engineVolume: listing.car.engineVolume,
+            enginePower: listing.car.enginePower,
+            color: listing.car.color,
+            steeringWheel: listing.car.steeringWheel,
+            saleMode: listing.car.isExchange ? "exchange" : "classified",
+            price: listing.car.price,
+            description: listing.car.description ?? "",
+            images: listing.car.images.map((url) => ({ url })),
+          }
+        : {
+            steeringWheel: "left",
+            mileageKm: 0,
+            images: [],
+            saleMode: "classified",
+          },
   });
 
   const saleMode = watch("saleMode");
@@ -72,11 +104,25 @@ export function ListingForm() {
   const onSubmit = handleSubmit(async (values) => {
     setApiError(null);
     try {
-      const { saleMode: mode, images, ...rest } = values;
+      const { saleMode: chosenMode, images, ...rest } = values;
+      const imageUrls = images.map((image) => image.url);
+
+      if (isEdit && listing) {
+        const payload: UpdateListingInput = { ...rest, images: imageUrls };
+        if (priceLocked) delete payload.price; // exchange price is engine-managed
+        await updateListing(token as string, listing.id, payload);
+        await queryClient.invalidateQueries({ queryKey: ["dashboard", "listings"] });
+        await queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
+        setSaved(true);
+        await new Promise((resolve) => setTimeout(resolve, 700));
+        router.push("/dashboard/listings");
+        return;
+      }
+
       await createListing(token as string, {
         ...rest,
-        isExchange: mode === "exchange",
-        images: images.map((image) => image.url),
+        isExchange: chosenMode === "exchange",
+        images: imageUrls,
       });
       await queryClient.invalidateQueries({ queryKey: ["dashboard", "listings"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
@@ -85,25 +131,36 @@ export function ListingForm() {
       setApiError(
         err instanceof ApiError
           ? err.message
-          : t("listingForm.createError"),
+          : t(isEdit ? "listingForm.editError" : "listingForm.createError"),
       );
     }
   });
 
+  const showStep = (n: 1 | 2 | 3) => isEdit || step === n;
+
   return (
     <form onSubmit={onSubmit} className="flex w-full flex-col gap-6">
-      <div className="flex items-center gap-2">
-        {[1, 2, 3].map((s) => (
-          <span
-            key={s}
-            className={cn("h-1.5 flex-1 rounded-full", s <= step ? "bg-brand" : "bg-border")}
-          />
-        ))}
-      </div>
+      {isEdit ? (
+        <h1 className="text-[24px] font-semibold tracking-tight text-foreground">
+          {t("listingForm.editTitle")}
+        </h1>
+      ) : (
+        <div className="flex items-center gap-2">
+          {[1, 2, 3].map((s) => (
+            <span
+              key={s}
+              className={cn("h-1.5 flex-1 rounded-full", s <= step ? "bg-brand" : "bg-border")}
+            />
+          ))}
+        </div>
+      )}
 
       {apiError ? <p className="text-[13px] text-destructive">{apiError}</p> : null}
+      {saved ? (
+        <p className="text-[13px] font-medium text-success">{t("listingForm.saved")}</p>
+      ) : null}
 
-      {step === 1 ? (
+      {showStep(1) ? (
         <div className="flex flex-col gap-5">
           <h2 className="text-[17px] font-semibold text-foreground">{t("listingForm.stepBasics")}</h2>
           <Select label={t("quickSearch.make")} error={errors.make?.message} {...register("make")}>
@@ -149,7 +206,7 @@ export function ListingForm() {
         </div>
       ) : null}
 
-      {step === 2 ? (
+      {showStep(2) ? (
         <div className="flex flex-col gap-5">
           <h2 className="text-[17px] font-semibold text-foreground">{t("specs.title")}</h2>
           <div className="grid grid-cols-2 gap-3">
@@ -237,7 +294,7 @@ export function ListingForm() {
         </div>
       ) : null}
 
-      {step === 3 ? (
+      {showStep(3) ? (
         <div className="flex flex-col gap-5">
           <h2 className="text-[17px] font-semibold text-foreground">{t("listingForm.stepPricePhotos")}</h2>
 
@@ -248,13 +305,20 @@ export function ListingForm() {
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label
                 className={cn(
-                  "cursor-pointer rounded-xl border p-4 transition-colors",
+                  "rounded-xl border p-4 transition-colors",
+                  isEdit ? "cursor-default opacity-70" : "cursor-pointer",
                   saleMode === "classified"
                     ? "border-brand bg-brand-light"
                     : "border-border bg-surface hover:border-foreground/30",
                 )}
               >
-                <input type="radio" value="classified" className="sr-only" {...register("saleMode")} />
+                <input
+                  type="radio"
+                  value="classified"
+                  className="sr-only"
+                  disabled={isEdit}
+                  {...register("saleMode")}
+                />
                 <span className="block text-[15px] font-semibold text-foreground">
                   {t("listingForm.classifiedTitle")}
                 </span>
@@ -264,13 +328,20 @@ export function ListingForm() {
               </label>
               <label
                 className={cn(
-                  "cursor-pointer rounded-xl border p-4 transition-colors",
+                  "rounded-xl border p-4 transition-colors",
+                  isEdit ? "cursor-default opacity-70" : "cursor-pointer",
                   saleMode === "exchange"
                     ? "border-brand bg-brand-light"
                     : "border-border bg-surface hover:border-foreground/30",
                 )}
               >
-                <input type="radio" value="exchange" className="sr-only" {...register("saleMode")} />
+                <input
+                  type="radio"
+                  value="exchange"
+                  className="sr-only"
+                  disabled={isEdit}
+                  {...register("saleMode")}
+                />
                 <span className="block text-[15px] font-semibold text-foreground">
                   {t("home.exchange.eyebrow")}
                 </span>
@@ -287,8 +358,14 @@ export function ListingForm() {
             inputMode="numeric"
             placeholder="9500000"
             error={errors.price?.message}
+            disabled={priceLocked}
             {...register("price", { valueAsNumber: true })}
           />
+          {priceLocked ? (
+            <p className="-mt-3 text-[12px] text-muted-foreground">
+              {t("row.exchangePriceLocked")}
+            </p>
+          ) : null}
           <Textarea
             label={t("listingForm.description")}
             placeholder={t("listingForm.descriptionPlaceholder")}
@@ -304,22 +381,40 @@ export function ListingForm() {
       ) : null}
 
       <div className="flex items-center justify-between gap-3">
-        {step > 1 ? (
-          <Button type="button" variant="secondary" onClick={handleBack}>
-            {t("listingForm.back")}
-          </Button>
+        {isEdit ? (
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => router.push("/dashboard/listings")}
+              disabled={isSubmitting}
+            >
+              {t("listingForm.cancel")}
+            </Button>
+            <Button type="submit" disabled={isSubmitting || saved}>
+              {isSubmitting ? t("listingForm.saving") : t("listingForm.saveChanges")}
+            </Button>
+          </>
         ) : (
-          <span />
-        )}
+          <>
+            {step > 1 ? (
+              <Button type="button" variant="secondary" onClick={handleBack}>
+                {t("listingForm.back")}
+              </Button>
+            ) : (
+              <span />
+            )}
 
-        {step < TOTAL_STEPS ? (
-          <Button type="button" onClick={handleNext}>
-            {t("listingForm.next")}
-          </Button>
-        ) : (
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? t("listingForm.publishing") : t("listingForm.publish")}
-          </Button>
+            {step < TOTAL_STEPS ? (
+              <Button type="button" onClick={handleNext}>
+                {t("listingForm.next")}
+              </Button>
+            ) : (
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? t("listingForm.publishing") : t("listingForm.publish")}
+              </Button>
+            )}
+          </>
         )}
       </div>
     </form>

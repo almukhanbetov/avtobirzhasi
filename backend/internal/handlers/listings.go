@@ -120,12 +120,28 @@ func (h *ListingsHandler) Create(c *gin.Context) {
 	c.JSON(http.StatusCreated, toCarResponse(*listing))
 }
 
+// updateListingRequest is the owner-editable subset of a listing. Every
+// field is optional (partial update). System columns — id, user_id,
+// status, is_exchange, initial_price, exchange_started_at, created_at,
+// updated_at — are deliberately absent and can never be set through this
+// endpoint. `images`, when present, fully replaces the gallery.
 type updateListingRequest struct {
-	Price       *int64  `json:"price" binding:"omitempty,min=1"`
-	MileageKm   *int    `json:"mileageKm" binding:"omitempty,min=0"`
-	Description *string `json:"description"`
-	Region      *string `json:"region" binding:"omitempty,min=1"`
-	Color       *string `json:"color" binding:"omitempty,min=1"`
+	Make          *string   `json:"make" binding:"omitempty,min=1"`
+	Model         *string   `json:"model" binding:"omitempty,min=1"`
+	Year          *int      `json:"year" binding:"omitempty,min=1990"`
+	Price         *int64    `json:"price" binding:"omitempty,min=1"`
+	MileageKm     *int      `json:"mileageKm" binding:"omitempty,min=0"`
+	Region        *string   `json:"region" binding:"omitempty,min=1"`
+	Transmission  *string   `json:"transmission" binding:"omitempty,oneof=automatic manual"`
+	FuelType      *string   `json:"fuelType" binding:"omitempty,oneof=petrol diesel hybrid electric gas"`
+	BodyType      *string   `json:"bodyType" binding:"omitempty,oneof=sedan suv crossover hatchback coupe universal"`
+	Drivetrain    *string   `json:"drivetrain" binding:"omitempty,oneof=fwd rwd awd"`
+	EngineVolume  *float64  `json:"engineVolume" binding:"omitempty,gt=0"`
+	EnginePower   *int      `json:"enginePower" binding:"omitempty,min=1"`
+	Color         *string   `json:"color" binding:"omitempty,min=1"`
+	SteeringWheel *string   `json:"steeringWheel" binding:"omitempty,oneof=left right"`
+	Description   *string   `json:"description"`
+	Images        *[]string `json:"images" binding:"omitempty,min=1,max=10,dive,url"`
 }
 
 // loadOwnedListing loads a listing and verifies the authenticated user
@@ -148,9 +164,13 @@ func (h *ListingsHandler) loadOwnedListing(c *gin.Context, userID, id string) (*
 	return listing, true
 }
 
-// Update handles PATCH /api/listings/:id (owner only). Only the fields a
-// seller would realistically edit post-creation are exposed — changing
-// make/model/year/engine specs is treated as "list a new car" instead.
+// Update handles PATCH /api/listings/:id — the owner edits their own
+// listing. Auth() supplies the user (401 without it); loadOwnedListing
+// enforces ownership (403 for someone else's, 404 if missing). Only the
+// fields in updateListingRequest are touched; a manual price change on a
+// non-exchange listing also lands one 'manual_edit' row in
+// listing_price_history and the daily -1% engine simply continues from
+// the new price (no extra decay applied here).
 func (h *ListingsHandler) Update(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
 	id, ok := requireUUIDParam(c, "id")
@@ -165,41 +185,62 @@ func (h *ListingsHandler) Update(c *gin.Context) {
 
 	var req updateListingRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", "Проверьте правильность заполнения полей")
+		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", "Проверьте правильность заполнения полей объявления")
 		return
 	}
 
-	// Auto Exchange listings move only via the daily ±1% engine
-	// (ExchangeService.decayListingPrices) — direct price edits here would
-	// let the owner bypass the fairness mechanic entirely (force an
-	// instant match, or freeze the price after an expiry resumes it).
+	// Auto Exchange listings move only via the daily ±1% engine — a direct
+	// price edit here would let the owner bypass the fairness mechanic.
 	if req.Price != nil && listing.IsExchange {
 		respondError(c, http.StatusConflict, "EXCHANGE_MANAGED_FIELD", "Цена управляется автообменом и не может быть изменена вручную")
 		return
 	}
 
 	fields := map[string]any{}
-	if req.Price != nil {
-		fields["price"] = *req.Price
+	setStr := func(col string, v *string) {
+		if v != nil {
+			fields[col] = *v
+		}
+	}
+	setStr("make", req.Make)
+	setStr("model", req.Model)
+	setStr("region", req.Region)
+	setStr("transmission", req.Transmission)
+	setStr("fuel_type", req.FuelType)
+	setStr("body_type", req.BodyType)
+	setStr("drivetrain", req.Drivetrain)
+	setStr("color", req.Color)
+	setStr("steering_wheel", req.SteeringWheel)
+	setStr("description", req.Description)
+	if req.Year != nil {
+		fields["year"] = *req.Year
 	}
 	if req.MileageKm != nil {
 		fields["mileage_km"] = *req.MileageKm
 	}
-	if req.Description != nil {
-		fields["description"] = *req.Description
+	if req.EngineVolume != nil {
+		fields["engine_volume"] = *req.EngineVolume
 	}
-	if req.Region != nil {
-		fields["region"] = *req.Region
-	}
-	if req.Color != nil {
-		fields["color"] = *req.Color
+	if req.EnginePower != nil {
+		fields["engine_power"] = *req.EnginePower
 	}
 
-	if len(fields) > 0 {
-		if err := h.listings.Update(c.Request.Context(), id, fields); err != nil {
-			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обновить объявление")
-			return
+	var priceEdit *repository.PriceEdit
+	if req.Price != nil {
+		fields["price"] = *req.Price
+		if *req.Price != listing.Price {
+			priceEdit = &repository.PriceEdit{From: listing.Price, To: *req.Price}
 		}
+	}
+
+	if len(fields) == 0 && req.Images == nil {
+		c.JSON(http.StatusOK, toCarResponse(*listing))
+		return
+	}
+
+	if err := h.listings.UpdateListing(c.Request.Context(), id, fields, req.Images, priceEdit); err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обновить объявление")
+		return
 	}
 
 	updated, err := h.listings.GetByID(c.Request.Context(), id)
