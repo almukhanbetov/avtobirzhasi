@@ -104,6 +104,13 @@ export const translations = {
 
     "quickSearch.region": "Регион",
     "quickSearch.anyRegion": "Любой регион",
+
+    "locationSelector.city": "Город",
+    "locationSelector.chooseCity": "Выберите город",
+    "locationSelector.district": "Район",
+    "locationSelector.chooseDistrict": "Выберите район",
+    "locationSelector.loadError": "Не удалось загрузить список, попробуйте позже",
+
     "quickSearch.make": "Марка",
     "quickSearch.anyMake": "Любая марка",
     "quickSearch.model": "Модель",
@@ -689,6 +696,13 @@ export const translations = {
 
     "quickSearch.region": "Аймақ",
     "quickSearch.anyRegion": "Кез келген аймақ",
+
+    "locationSelector.city": "Қала",
+    "locationSelector.chooseCity": "Қаланы таңдаңыз",
+    "locationSelector.district": "Аудан",
+    "locationSelector.chooseDistrict": "Ауданды таңдаңыз",
+    "locationSelector.loadError": "Тізімді жүктеу мүмкін болмады, кейінірек көріңіз",
+
     "quickSearch.make": "Марка",
     "quickSearch.anyMake": "Кез келген марка",
     "quickSearch.model": "Модель",
