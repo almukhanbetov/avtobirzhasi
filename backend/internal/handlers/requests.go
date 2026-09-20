@@ -14,12 +14,13 @@ import (
 // RequestsHandler wires the authenticated /api/requests and
 // /api/dashboard/requests routes.
 type RequestsHandler struct {
-	requests *repository.BuyerRequestRepository
+	requests  *repository.BuyerRequestRepository
+	locations *repository.LocationRepository
 }
 
 // NewRequestsHandler creates a RequestsHandler.
-func NewRequestsHandler(requests *repository.BuyerRequestRepository) *RequestsHandler {
-	return &RequestsHandler{requests: requests}
+func NewRequestsHandler(requests *repository.BuyerRequestRepository, locations *repository.LocationRepository) *RequestsHandler {
+	return &RequestsHandler{requests: requests, locations: locations}
 }
 
 // RegisterRequestsRoutes wires the buyer-facing request management
@@ -38,6 +39,15 @@ type createRequestRequest struct {
 	YearTo       int    `json:"yearTo" binding:"required"`
 	Region       string `json:"region" binding:"required"`
 	InitialOffer int64  `json:"initialOffer" binding:"required,min=1"`
+	// Stage 6А: optional structured location, alongside the legacy Region
+	// text above (required, what Match reads). Same rules as
+	// createListingRequest — CityID must belong to RegionID, DistrictID
+	// must belong to CityID, checked by the shared validLocation; the
+	// stored Region text is re-derived from the reference data when
+	// RegionID is present (resolveLocationText), never trusted verbatim.
+	RegionID   *string `json:"regionId" binding:"omitempty,uuid"`
+	CityID     *string `json:"cityId" binding:"omitempty,uuid"`
+	DistrictID *string `json:"districtId" binding:"omitempty,uuid"`
 }
 
 // Create handles POST /api/requests. current_offer starts equal to
@@ -55,13 +65,27 @@ func (h *RequestsHandler) Create(c *gin.Context) {
 		return
 	}
 
+	if !validLocation(c, h.locations, req.RegionID, req.CityID, req.DistrictID) {
+		return
+	}
+	regionText := req.Region
+	if derived, ok, err := resolveLocationText(c.Request.Context(), h.locations, req.RegionID, req.CityID); err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось создать заявку, попробуйте позже")
+		return
+	} else if ok {
+		regionText = derived
+	}
+
 	request := &models.BuyerRequest{
 		UserID:       userID,
 		Make:         req.Make,
 		Model:        req.Model,
 		YearFrom:     req.YearFrom,
 		YearTo:       req.YearTo,
-		Region:       req.Region,
+		Region:       regionText,
+		RegionID:     req.RegionID,
+		CityID:       req.CityID,
+		DistrictID:   req.DistrictID,
 		InitialOffer: req.InitialOffer,
 	}
 
@@ -76,6 +100,14 @@ func (h *RequestsHandler) Create(c *gin.Context) {
 type updateRequestRequest struct {
 	CurrentOffer *int64  `json:"currentOffer"`
 	Region       *string `json:"region" binding:"omitempty,min=1"`
+	// Stage 6Б: same optional structured location as createRequestRequest.
+	// When RegionID is present, CityID/DistrictID (even if absent) fully
+	// replace the stored location together — see buildListingFieldUpdate's
+	// doc comment (listings.go) for why: a region change without a fresh
+	// city must not leave the old city/district behind.
+	RegionID   *string `json:"regionId" binding:"omitempty,uuid"`
+	CityID     *string `json:"cityId" binding:"omitempty,uuid"`
+	DistrictID *string `json:"districtId" binding:"omitempty,uuid"`
 }
 
 // loadOwnedRequest loads a buyer request and verifies the authenticated
@@ -126,9 +158,38 @@ func (h *RequestsHandler) Update(c *gin.Context) {
 		return
 	}
 
+	if !validLocation(c, h.locations, req.RegionID, req.CityID, req.DistrictID) {
+		return
+	}
+	if derived, ok, err := resolveLocationText(c.Request.Context(), h.locations, req.RegionID, req.CityID); err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обновить заявку")
+		return
+	} else if ok {
+		req.Region = &derived
+	}
+
 	fields := map[string]any{}
 	if req.Region != nil {
 		fields["region"] = *req.Region
+	}
+	// The location trio is replaced as a whole whenever regionId is sent —
+	// never a partial patch of just one of the three — so a region change
+	// can't leave a stale city/district behind, and a city change can't
+	// leave a stale district behind. A PATCH that omits regionId entirely
+	// (e.g. one that only ever touches other fields) never reaches this
+	// block, so it can't accidentally clear an existing location.
+	if req.RegionID != nil {
+		fields["region_id"] = *req.RegionID
+		if req.CityID != nil {
+			fields["city_id"] = *req.CityID
+		} else {
+			fields["city_id"] = nil
+		}
+		if req.DistrictID != nil {
+			fields["district_id"] = *req.DistrictID
+		} else {
+			fields["district_id"] = nil
+		}
 	}
 
 	if len(fields) > 0 {

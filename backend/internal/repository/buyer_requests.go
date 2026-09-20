@@ -24,13 +24,14 @@ func NewBuyerRequestRepository(r *Repository) *BuyerRequestRepository {
 
 const buyerRequestColumns = `
 	id, user_id, make, model, year_from, year_to, region, initial_offer,
-	current_offer, status, created_at, updated_at`
+	current_offer, status, created_at, updated_at, region_id, city_id, district_id`
 
 func scanBuyerRequest(row scannable) (models.BuyerRequest, error) {
 	var b models.BuyerRequest
 	err := row.Scan(
 		&b.ID, &b.UserID, &b.Make, &b.Model, &b.YearFrom, &b.YearTo, &b.Region,
 		&b.InitialOffer, &b.CurrentOffer, &b.Status, &b.CreatedAt, &b.UpdatedAt,
+		&b.RegionID, &b.CityID, &b.DistrictID,
 	)
 	return b, err
 }
@@ -40,12 +41,16 @@ func scanBuyerRequest(row scannable) (models.BuyerRequest, error) {
 // back into b.
 func (r *BuyerRequestRepository) Create(ctx context.Context, b *models.BuyerRequest) error {
 	const query = `
-		INSERT INTO buyer_requests (user_id, make, model, year_from, year_to, region, initial_offer, current_offer)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $7)
+		INSERT INTO buyer_requests (
+			user_id, make, model, year_from, year_to, region, initial_offer, current_offer,
+			region_id, city_id, district_id
+		)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $7, $8, $9, $10)
 		RETURNING id, current_offer, status, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
 		b.UserID, b.Make, b.Model, b.YearFrom, b.YearTo, b.Region, b.InitialOffer,
+		b.RegionID, b.CityID, b.DistrictID,
 	).Scan(&b.ID, &b.CurrentOffer, &b.Status, &b.CreatedAt, &b.UpdatedAt)
 }
 

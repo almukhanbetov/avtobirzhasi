@@ -49,3 +49,23 @@ func requireUUIDParam(c *gin.Context, name string) (string, bool) {
 	}
 	return id, true
 }
+
+// optionalUUIDQuery reads an optional query parameter (unlike
+// requireUUIDParam's required path param) and validates it looks like a
+// UUID if present — Stage 7А's regionId/cityId/districtId catalog filter
+// params, none of which are mandatory. Returns (nil, true) when absent,
+// (&value, true) when present and well-formed, or writes a 400 and
+// returns (nil, false) when present but malformed — same reasoning as
+// requireUUIDParam: a bad value must never reach Postgres as a bare
+// string and surface as a raw driver error.
+func optionalUUIDQuery(c *gin.Context, name string) (*string, bool) {
+	raw := c.Query(name)
+	if raw == "" {
+		return nil, true
+	}
+	if !uuidPattern.MatchString(raw) {
+		respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", "Некорректный идентификатор в параметрах поиска")
+		return nil, false
+	}
+	return &raw, true
+}

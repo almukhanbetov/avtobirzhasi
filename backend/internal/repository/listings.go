@@ -27,7 +27,7 @@ const listingColumns = `
 	id, user_id, make, model, year, price, mileage_km, region, transmission,
 	fuel_type, body_type, drivetrain, engine_volume, engine_power, color,
 	steering_wheel, description, status, is_exchange, initial_price,
-	exchange_started_at, created_at, updated_at`
+	exchange_started_at, created_at, updated_at, region_id, city_id, district_id`
 
 type scannable interface {
 	Scan(dest ...any) error
@@ -39,7 +39,7 @@ func scanListing(row scannable) (models.Listing, error) {
 		&l.ID, &l.UserID, &l.Make, &l.Model, &l.Year, &l.Price, &l.MileageKm, &l.Region,
 		&l.Transmission, &l.FuelType, &l.BodyType, &l.Drivetrain, &l.EngineVolume, &l.EnginePower,
 		&l.Color, &l.SteeringWheel, &l.Description, &l.Status, &l.IsExchange, &l.InitialPrice,
-		&l.ExchangeStartedAt, &l.CreatedAt, &l.UpdatedAt,
+		&l.ExchangeStartedAt, &l.CreatedAt, &l.UpdatedAt, &l.RegionID, &l.CityID, &l.DistrictID,
 	)
 	return l, err
 }
@@ -47,7 +47,14 @@ func scanListing(row scannable) (models.Listing, error) {
 // ListingFilters mirrors frontend/features/listings/filterCars.ts's
 // CarFilters exactly — field for field.
 type ListingFilters struct {
-	Region       string
+	Region string
+	// RegionID/CityID/DistrictID — Stage 7А structured location filter.
+	// At most the most specific one is applied (District > City > Region
+	// > legacy Region text) — see List's doc comment for the exact
+	// priority and legacy-compatibility rules.
+	RegionID     *string
+	CityID       *string
+	DistrictID   *string
 	Make         string
 	Model        string
 	YearFrom     *int
@@ -66,6 +73,32 @@ type ListingFilters struct {
 // List returns active listings matching f, sorted and paginated, plus the
 // total count of matching rows (before pagination) for building the
 // frontend's {items, total, totalPages, page} envelope.
+//
+// Location filter priority (Stage 7А) — at most one of these applies,
+// most specific wins, never combined:
+//  1. DistrictID, if set: district_id = $district (exact, no legacy
+//     fallback — old listings never carried district information at
+//     all, so there is nothing to fall back to).
+//  2. Else CityID, if set: city_id = $city (exact only — a listing whose
+//     city isn't reliably known, i.e. city_id is NULL, is never included
+//     by guessing from free text).
+//  3. Else RegionID, if set: region_id = $region OR (region_id IS NULL
+//     AND region equals the exact name of one of that region's cities).
+//     The second half is the one legacy-compatibility exception the spec
+//     calls for: the free-text `region` column has always held a city
+//     name (see docs/LOCATION_IMPLEMENTATION.md Stage 1), so an old,
+//     never-backfilled listing can still be identified as belonging to a
+//     region by an *exact* match against its cities — never a
+//     substring/ILIKE match.
+//  4. Else, if RegionID is absent entirely but the legacy Region text is
+//     present: region = $region, byte-for-byte the pre-Stage-7А
+//     behavior, so old bookmarked links keep working unchanged.
+//
+// If both RegionID and Region text are sent together, RegionID wins
+// outright — Region text is not consulted at all in that case. This
+// avoids either an OR (which could silently widen results to whatever
+// the mismatched text happens to match) or an AND (which could exclude
+// otherwise-correct rows over a stale/mismatched text value).
 func (r *ListingRepository) List(ctx context.Context, f ListingFilters) ([]models.Listing, int, error) {
 	where := []string{"status = 'active'"}
 	var args []any
@@ -75,7 +108,19 @@ func (r *ListingRepository) List(ctx context.Context, f ListingFilters) ([]model
 		where = append(where, fmt.Sprintf(cond, len(args)))
 	}
 
-	if f.Region != "" {
+	switch {
+	case f.DistrictID != nil:
+		add("district_id = $%d", *f.DistrictID)
+	case f.CityID != nil:
+		add("city_id = $%d", *f.CityID)
+	case f.RegionID != nil:
+		args = append(args, *f.RegionID)
+		idx := len(args)
+		where = append(where, fmt.Sprintf(
+			"(region_id = $%d OR (region_id IS NULL AND region IN (SELECT name_ru FROM cities WHERE region_id = $%d)))",
+			idx, idx,
+		))
+	case f.Region != "":
 		add("region = $%d", f.Region)
 	}
 	if f.Make != "" {
@@ -231,14 +276,16 @@ func (r *ListingRepository) Create(ctx context.Context, l *models.Listing) error
 		INSERT INTO listings (
 			user_id, make, model, year, price, mileage_km, region, transmission,
 			fuel_type, body_type, drivetrain, engine_volume, engine_power, color,
-			steering_wheel, description, status, is_exchange, initial_price, exchange_started_at
-		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+			steering_wheel, description, status, is_exchange, initial_price, exchange_started_at,
+			region_id, city_id, district_id
+		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)
 		RETURNING id, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
 		l.UserID, l.Make, l.Model, l.Year, l.Price, l.MileageKm, l.Region, l.Transmission,
 		l.FuelType, l.BodyType, l.Drivetrain, l.EngineVolume, l.EnginePower, l.Color,
 		l.SteeringWheel, l.Description, l.Status, l.IsExchange, l.InitialPrice, l.ExchangeStartedAt,
+		l.RegionID, l.CityID, l.DistrictID,
 	).Scan(&l.ID, &l.CreatedAt, &l.UpdatedAt)
 }
 

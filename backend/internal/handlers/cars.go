@@ -12,12 +12,13 @@ import (
 
 // CarsHandler wires the public /api/cars routes to ListingRepository.
 type CarsHandler struct {
-	listings *repository.ListingRepository
+	listings  *repository.ListingRepository
+	locations *repository.LocationRepository
 }
 
 // NewCarsHandler creates a CarsHandler.
-func NewCarsHandler(listings *repository.ListingRepository) *CarsHandler {
-	return &CarsHandler{listings: listings}
+func NewCarsHandler(listings *repository.ListingRepository, locations *repository.LocationRepository) *CarsHandler {
+	return &CarsHandler{listings: listings, locations: locations}
 }
 
 // RegisterCarsRoutes wires the public catalog routes. None of these
@@ -53,13 +54,35 @@ func parseInt64Ptr(raw string) *int64 {
 // List handles GET /api/cars. Query params match
 // frontend/features/listings/filterCars.ts's CarFilters exactly: region,
 // make, model, yearFrom, yearTo, priceFrom, priceTo, bodyType,
-// transmission, drivetrain, fuelType, sort, page.
+// transmission, drivetrain, fuelType, sort, page — plus, since Stage 7А,
+// the optional structured location regionId/cityId/districtId. See
+// ListingRepository.List's doc comment for the exact filtering/priority
+// rules between these and the legacy `region` text.
 func (h *CarsHandler) List(c *gin.Context) {
 	const pageSize = 8
 	page, _ := strconv.Atoi(c.Query("page"))
 
+	regionID, ok := optionalUUIDQuery(c, "regionId")
+	if !ok {
+		return
+	}
+	cityID, ok := optionalUUIDQuery(c, "cityId")
+	if !ok {
+		return
+	}
+	districtID, ok := optionalUUIDQuery(c, "districtId")
+	if !ok {
+		return
+	}
+	if !validLocation(c, h.locations, regionID, cityID, districtID) {
+		return
+	}
+
 	filters := repository.ListingFilters{
 		Region:       c.Query("region"),
+		RegionID:     regionID,
+		CityID:       cityID,
+		DistrictID:   districtID,
 		Make:         c.Query("make"),
 		Model:        c.Query("model"),
 		YearFrom:     parseIntPtr(c.Query("yearFrom")),

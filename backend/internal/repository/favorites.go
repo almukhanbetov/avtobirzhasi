@@ -25,7 +25,7 @@ const favoriteListingColumns = `
 	l.id, l.user_id, l.make, l.model, l.year, l.price, l.mileage_km, l.region, l.transmission,
 	l.fuel_type, l.body_type, l.drivetrain, l.engine_volume, l.engine_power, l.color,
 	l.steering_wheel, l.description, l.status, l.is_exchange, l.initial_price,
-	l.exchange_started_at, l.created_at, l.updated_at`
+	l.exchange_started_at, l.created_at, l.updated_at, l.region_id, l.city_id, l.district_id`
 
 // Add favorites a listing for a user. Idempotent — favoriting an
 // already-favorited listing is a no-op, not an error.
