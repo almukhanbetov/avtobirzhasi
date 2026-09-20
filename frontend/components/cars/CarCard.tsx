@@ -1,12 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Gauge, MapPin } from "lucide-react";
+import { Gauge, ImageOff, MapPin } from "lucide-react";
 import type { Car } from "@/types/car";
 import { formatMileage, formatTenge } from "@/lib/format/money";
 import { transmissionLabels } from "@/lib/labels/car";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import { isTrustedImageUrl, resolveImageUrl } from "@/lib/images/trustedImageUrl";
 import { MatchIndicator } from "@/components/exchange/MatchIndicator";
 import { PriceMovement } from "@/components/exchange/PriceMovement";
 import { FavoriteButton } from "@/components/cars/FavoriteButton";
@@ -14,6 +16,34 @@ import { FavoriteButton } from "@/components/cars/FavoriteButton";
 export function CarCard({ car }: { car: Car }) {
   const { lang } = useLanguage();
   const title = `${car.make} ${car.model}`;
+  // A stored /uploads/ URL from an earlier local backend run can point
+  // at a port the current one isn't on (Step 2, "Восстановление
+  // настоящих фотографий") — resolved to the currently configured
+  // origin before anything else touches it. A no-op for every other
+  // kind of URL (Unsplash, production, already-correct).
+  const resolvedImageUrl = resolveImageUrl(car.imageUrl);
+  // Some listings carry an empty, malformed, or untrusted (not in
+  // next.config.js's images.remotePatterns) photo URL — next/image
+  // throws a hard runtime error for those, crashing the whole page
+  // rather than just this card. Fall back to a plain placeholder instead.
+  const hasTrustedImage = isTrustedImageUrl(resolvedImageUrl);
+  // A URL can be on the trusted host allowlist yet still not actually
+  // load (wrong port for this environment, a deleted upload, a network
+  // hiccup — Stage 8В-1: a real listing's stored /uploads/ URL pointed
+  // at a port nothing here serves). next/image doesn't throw for that —
+  // the browser just fails the request — so this is the runtime
+  // counterpart to hasTrustedImage: caught via onError, not upfront.
+  //
+  // Tracked as *which URL* failed, not a bare boolean (Step 4 bug:
+  // a boolean never clears once set, so once one src failed the
+  // placeholder stuck around forever — even across a dev hot-reload
+  // that fixed the resolved URL underneath it, since the same component
+  // instance keeps its hook state). Comparing against the current
+  // resolvedImageUrl means a genuinely different (or since-repaired) URL
+  // gets a fresh chance to load; the exact same URL failing again still
+  // correctly keeps the placeholder.
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const showImage = hasTrustedImage && resolvedImageUrl !== failedImageUrl;
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-colors hover:border-foreground/25">
@@ -24,13 +54,20 @@ export function CarCard({ car }: { car: Car }) {
       />
 
       <div className="relative aspect-[4/3] w-full overflow-hidden bg-background">
-        <Image
-          src={car.imageUrl}
-          alt={title}
-          fill
-          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
-          className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
-        />
+        {showImage ? (
+          <Image
+            src={resolvedImageUrl as string}
+            alt={title}
+            fill
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            onError={() => setFailedImageUrl(resolvedImageUrl)}
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+            <ImageOff size={32} aria-hidden="true" />
+          </div>
+        )}
         {car.isExchange ? (
           <div className="absolute left-3 top-3">
             <MatchIndicator />
