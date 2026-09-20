@@ -26,9 +26,10 @@ func newUploadAndListingServer(t *testing.T, pool *pgxpool.Pool, uploadDir strin
 	router := gin.New()
 	repo := repository.New(pool)
 	listingRepo := repository.NewListingRepository(repo)
+	locationRepo := repository.NewLocationRepository(repo)
 
 	api := router.Group("/api")
-	handlers.RegisterListingsWriteRoutes(api, handlers.NewListingsHandler(listingRepo), testJWTSecret)
+	handlers.RegisterListingsWriteRoutes(api, handlers.NewListingsHandler(listingRepo, locationRepo), testJWTSecret)
 	handlers.RegisterUploadsRoutes(
 		api, router,
 		handlers.NewUploadsHandler(uploadDir, "http://test.local"),
