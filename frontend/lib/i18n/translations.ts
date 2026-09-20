@@ -522,6 +522,7 @@ export const translations = {
 
     "listingForm.stepBasics": "Основное",
     "listingForm.chooseMake": "Выберите марку",
+    "listingForm.chooseModel": "Выберите модель",
     "listingForm.year": "Год выпуска",
     "listingForm.mileage": "Пробег, км",
     "listingForm.chooseRegion": "Выберите регион",
@@ -1115,6 +1116,7 @@ export const translations = {
 
     "listingForm.stepBasics": "Негізгі",
     "listingForm.chooseMake": "Марканы таңдаңыз",
+    "listingForm.chooseModel": "Модельді таңдаңыз",
     "listingForm.year": "Шығарылған жылы",
     "listingForm.mileage": "Жүрісі, км",
     "listingForm.chooseRegion": "Аймақты таңдаңыз",
