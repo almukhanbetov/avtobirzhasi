@@ -33,6 +33,9 @@ export interface BuyerRequest {
   yearFrom: number;
   yearTo: number;
   region: string;
+  regionId?: string;
+  cityId?: string;
+  districtId?: string;
   currentOffer: number;
   status: ListingStatus;
   updatedAt: string;

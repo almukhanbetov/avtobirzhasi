@@ -15,6 +15,9 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 // listings — no client-side slicing of a larger set needed.
 const freshFilters: CarFilters = {
   region: "",
+  regionId: null,
+  cityId: null,
+  districtId: null,
   make: "",
   model: "",
   yearFrom: null,

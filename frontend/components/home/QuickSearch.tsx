@@ -2,24 +2,46 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { Select } from "@/components/ui/Select";
-import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
-import { makes, regions, years } from "@/lib/mock/cars";
+import { makes, modelsByMake, years } from "@/lib/mock/cars";
 import { formatTenge } from "@/lib/format/money";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
+import {
+  LocationSelector,
+  EMPTY_LOCATION_VALUE,
+  type LocationValue,
+} from "@/features/location/LocationSelector";
+import { listRegions, listCitiesByRegion } from "@/lib/api/locations";
 
 export function QuickSearch() {
   const { t } = useLanguage();
   const router = useRouter();
 
-  const [region, setRegion] = useState("");
+  const [location, setLocation] = useState<LocationValue>(EMPTY_LOCATION_VALUE);
   const [make, setMake] = useState("");
   const [model, setModel] = useState("");
   const [year, setYear] = useState("");
   const [priceRange, setPriceRange] = useState("");
+
+  // Stage 7Б: the legacy `region` text travels alongside regionId, same
+  // derivation as the catalog's own FilterForm (Stage 7А) — so /cars gets
+  // the exact same two-param contract regardless of which page the user
+  // searched from, and FilterChips/old clients on /cars keep working.
+  const regionsQuery = useQuery({
+    queryKey: ["locations", "regions"],
+    queryFn: listRegions,
+    staleTime: 5 * 60 * 1000,
+  });
+  const citiesQuery = useQuery({
+    queryKey: ["locations", "cities", location.regionId],
+    queryFn: () => listCitiesByRegion(location.regionId as string),
+    enabled: Boolean(location.regionId),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const prices = [
     { label: `${t("filters.to")} ${formatTenge(5000000)}`, value: "0-5000000" },
@@ -38,9 +60,15 @@ export function QuickSearch() {
     e.preventDefault();
 
     const params = new URLSearchParams();
-    if (region) params.set("region", region);
+    if (location.regionId) params.set("regionId", location.regionId);
+    if (location.cityId) params.set("cityId", location.cityId);
+    if (location.districtId) params.set("districtId", location.districtId);
+    const regionName = regionsQuery.data?.find((r) => r.id === location.regionId)?.nameRu ?? "";
+    const cityName = citiesQuery.data?.find((c) => c.id === location.cityId)?.nameRu ?? "";
+    const regionText = cityName || regionName;
+    if (regionText) params.set("region", regionText);
     if (make) params.set("make", make);
-    if (model.trim()) params.set("model", model.trim());
+    if (model) params.set("model", model);
     if (year) params.set("yearFrom", year);
     if (priceRange) {
       const [from, to] = priceRange.split("-");
@@ -60,23 +88,19 @@ export function QuickSearch() {
           className="rounded-2xl border border-border bg-surface p-6 sm:p-8"
         >
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_0.8fr_1.2fr_auto] lg:items-end">
-            <Select
-              label={t("quickSearch.region")}
-              value={region}
-              onChange={(e) => setRegion(e.target.value)}
-            >
-              <option value="">{t("quickSearch.anyRegion")}</option>
-              {regions.map((r) => (
-                <option key={r} value={r}>
-                  {r}
-                </option>
-              ))}
-            </Select>
+            <LocationSelector
+              value={location}
+              onChange={setLocation}
+              regionPlaceholder={t("quickSearch.anyRegion")}
+            />
 
             <Select
               label={t("quickSearch.make")}
               value={make}
-              onChange={(e) => setMake(e.target.value)}
+              onChange={(e) => {
+                setMake(e.target.value);
+                setModel("");
+              }}
             >
               <option value="">{t("quickSearch.anyMake")}</option>
               {makes.map((m) => (
@@ -86,12 +110,19 @@ export function QuickSearch() {
               ))}
             </Select>
 
-            <Input
+            <Select
               label={t("quickSearch.model")}
-              placeholder="Camry"
               value={model}
+              disabled={!make}
               onChange={(e) => setModel(e.target.value)}
-            />
+            >
+              <option value="">{t("quickSearch.anyModel")}</option>
+              {(modelsByMake[make] ?? []).map((m) => (
+                <option key={m} value={m}>
+                  {m}
+                </option>
+              ))}
+            </Select>
 
             <Select
               label={t("quickSearch.year")}

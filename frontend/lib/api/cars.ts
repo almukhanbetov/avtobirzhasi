@@ -12,6 +12,9 @@ export interface CarsListResponse {
 function buildCarsQuery(filters: CarFilters): string {
   const params = new URLSearchParams();
   if (filters.region) params.set("region", filters.region);
+  if (filters.regionId) params.set("regionId", filters.regionId);
+  if (filters.cityId) params.set("cityId", filters.cityId);
+  if (filters.districtId) params.set("districtId", filters.districtId);
   if (filters.make) params.set("make", filters.make);
   if (filters.model) params.set("model", filters.model);
   if (filters.yearFrom) params.set("yearFrom", String(filters.yearFrom));

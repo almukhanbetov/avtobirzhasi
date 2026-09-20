@@ -24,6 +24,11 @@ export interface CreateListingInput {
   description?: string;
   images: string[];
   isExchange: boolean;
+  // Optional structured location (Stage 5Б) — sent alongside the legacy
+  // `region` text above, which stays the Match-compatible field.
+  regionId?: string;
+  cityId?: string;
+  districtId?: string;
 }
 
 export function createListing(token: string, input: CreateListingInput): Promise<Car> {
@@ -54,6 +59,13 @@ export interface UpdateListingInput {
   steeringWheel?: string;
   description?: string;
   images?: string[];
+  // Stage 5В — same optional structured location as CreateListingInput.
+  // Backend derives the authoritative `region` text from these when
+  // present; sending regionId with no cityId/districtId clears any
+  // previously stored city/district for this listing.
+  regionId?: string;
+  cityId?: string;
+  districtId?: string;
 }
 
 export function updateListing(

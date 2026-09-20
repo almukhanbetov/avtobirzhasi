@@ -3,10 +3,9 @@
 import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Pencil, Search, Trash2, X } from "lucide-react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Select } from "@/components/ui/Select";
 import { formatTenge } from "@/lib/format/money";
 import { formatShortDate } from "@/lib/format/date";
 import { listingStatusLabels } from "@/lib/labels/dashboard";
@@ -14,7 +13,12 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { cancelRequest, updateRequest } from "@/lib/api/requests";
 import { ApiError } from "@/lib/api/client";
-import { regions } from "@/lib/mock/cars";
+import {
+  LocationSelector,
+  EMPTY_LOCATION_VALUE,
+  type LocationValue,
+} from "@/features/location/LocationSelector";
+import { listRegions, listCitiesByRegion, resolveLegacyRegionText } from "@/lib/api/locations";
 import type { BuyerRequest } from "@/types/dashboard";
 
 export function RequestRow({ request }: { request: BuyerRequest }) {
@@ -24,14 +28,72 @@ export function RequestRow({ request }: { request: BuyerRequest }) {
   const status = listingStatusLabels[lang][request.status];
 
   const [isEditing, setIsEditing] = useState(false);
-  const [region, setRegion] = useState(request.region);
+  // null = "not yet committed by the user (or by an auto-resolution)" —
+  // the actual value shown/submitted is derived below (effectiveLocation),
+  // never written here from an effect (avoids the setState-in-effect
+  // anti-pattern): it only ever changes via LocationSelector's onChange,
+  // i.e. a real interaction (including its own auto-city-select for a
+  // republican-significance region).
+  const [locationValue, setLocationValue] = useState<LocationValue | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Stage 6Б: an old request may have only the free-text `region` (no
+  // regionId) — try an exact match against the reference data. Applied
+  // only as a fallback for `effectiveLocation` below, never written to
+  // PostgreSQL by itself — only an explicit "Сохранить" click does that.
+  const needsLegacyMatch = isEditing && !request.regionId && !!request.region;
+  const legacyMatchQuery = useQuery({
+    queryKey: ["locations", "legacy-match", request.region],
+    queryFn: () => resolveLegacyRegionText(request.region),
+    enabled: needsLegacyMatch,
+    staleTime: Infinity,
+  });
+
+  const savedLocation: LocationValue = {
+    regionId: request.regionId ?? null,
+    cityId: request.cityId ?? null,
+    districtId: request.districtId ?? null,
+  };
+  const legacyResolved: LocationValue | null = legacyMatchQuery.data
+    ? { regionId: legacyMatchQuery.data.regionId, cityId: legacyMatchQuery.data.cityId, districtId: null }
+    : null;
+  // What LocationSelector actually shows: whatever the user has already
+  // committed (via onChange) takes priority; otherwise the request's own
+  // saved location; otherwise, for a legacy request, the resolved match
+  // once it arrives (or nothing, until then).
+  const effectiveLocation: LocationValue =
+    locationValue ?? (needsLegacyMatch ? (legacyResolved ?? EMPTY_LOCATION_VALUE) : savedLocation);
+
+  // Same derivation as RequestForm's create path (Stage 6А): the legacy
+  // `region` text — still what Match reads — is the selected city's name
+  // if any, else the region's.
+  const regionsForTextQuery = useQuery({
+    queryKey: ["locations", "regions"],
+    queryFn: listRegions,
+    enabled: isEditing,
+    staleTime: 5 * 60 * 1000,
+  });
+  const citiesForTextQuery = useQuery({
+    queryKey: ["locations", "cities", effectiveLocation.regionId],
+    queryFn: () => listCitiesByRegion(effectiveLocation.regionId as string),
+    enabled: isEditing && Boolean(effectiveLocation.regionId),
+    staleTime: 5 * 60 * 1000,
+  });
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["dashboard", "requests"] });
 
   const updateMutation = useMutation({
-    mutationFn: () => updateRequest(token as string, request.id, { region }),
+    mutationFn: () => {
+      const regionName = regionsForTextQuery.data?.find((r) => r.id === effectiveLocation.regionId)?.nameRu ?? "";
+      const cityName = citiesForTextQuery.data?.find((c) => c.id === effectiveLocation.cityId)?.nameRu ?? "";
+      return updateRequest(token as string, request.id, {
+        region: cityName || regionName || request.region,
+        regionId: effectiveLocation.regionId ?? undefined,
+        cityId: effectiveLocation.cityId ?? undefined,
+        districtId: effectiveLocation.districtId ?? undefined,
+      });
+    },
     onSuccess: () => {
       invalidate();
       setIsEditing(false);
@@ -51,6 +113,11 @@ export function RequestRow({ request }: { request: BuyerRequest }) {
     e.preventDefault();
     setFormError(null);
     updateMutation.mutate();
+  }
+
+  function handleCancelEdit() {
+    setIsEditing(false);
+    setLocationValue(null); // back to "derive from the saved request" next time
   }
 
   function handleCancel() {
@@ -74,7 +141,7 @@ export function RequestRow({ request }: { request: BuyerRequest }) {
           <button
             type="button"
             aria-label={t("row.cancelEdit")}
-            onClick={() => setIsEditing(false)}
+            onClick={handleCancelEdit}
             className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-black/[0.04]"
           >
             <X size={16} />
@@ -90,25 +157,23 @@ export function RequestRow({ request }: { request: BuyerRequest }) {
           </span>
         </div>
 
-        <Select label={t("quickSearch.region")} value={region} onChange={(e) => setRegion(e.target.value)}>
-          {regions.map((r) => (
-            <option key={r} value={r}>
-              {r}
-            </option>
-          ))}
-        </Select>
+        <LocationSelector value={effectiveLocation} onChange={setLocationValue} />
 
         {formError ? <p className="text-[13px] text-destructive">{formError}</p> : null}
 
         <div className="flex items-center gap-3">
-          <Button type="submit" size="md" disabled={updateMutation.isPending}>
+          <Button
+            type="submit"
+            size="md"
+            disabled={updateMutation.isPending || !effectiveLocation.regionId}
+          >
             {updateMutation.isPending ? t("row.saving") : t("row.save")}
           </Button>
           <Button
             type="button"
             variant="secondary"
             size="md"
-            onClick={() => setIsEditing(false)}
+            onClick={handleCancelEdit}
             disabled={updateMutation.isPending}
           >
             {t("row.cancelEdit")}

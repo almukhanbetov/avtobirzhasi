@@ -2,10 +2,16 @@ import { z } from "zod";
 
 export const listingSchema = z.object({
   make: z.string().min(1, "Выберите марку"),
-  model: z.string().min(1, "Введите модель"),
+  model: z.string().min(1, "Выберите модель"),
   year: z.number({ message: "Выберите год" }).int().min(1990, "Выберите год"),
   mileageKm: z.number({ message: "Введите пробег" }).int().min(0, "Введите пробег"),
   region: z.string().min(1, "Выберите регион"),
+  // UUIDs from LocationSelector (Stage 5Б) — only used by the create flow.
+  // `region` above stays the source of truth for validation/Match; these
+  // are additional, optional structured ids sent alongside it.
+  regionId: z.string().nullable().optional(),
+  cityId: z.string().nullable().optional(),
+  districtId: z.string().nullable().optional(),
   transmission: z.enum(["automatic", "manual"], { message: "Выберите коробку" }),
   fuelType: z.enum(["petrol", "diesel", "hybrid", "electric", "gas"], {
     message: "Выберите тип топлива",

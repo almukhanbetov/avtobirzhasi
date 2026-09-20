@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Select } from "@/components/ui/Select";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -12,7 +12,9 @@ import { requestSchema, type RequestFormValues } from "@/lib/validation/request"
 import { createRequest } from "@/lib/api/requests";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { makes, regions, years } from "@/lib/mock/cars";
+import { makes, modelsByMake, years } from "@/lib/mock/cars";
+import { LocationSelector, type LocationValue } from "@/features/location/LocationSelector";
+import { listRegions, listCitiesByRegion } from "@/lib/api/locations";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function RequestForm() {
@@ -25,13 +27,62 @@ export function RequestForm() {
   const {
     register,
     handleSubmit,
+    watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<RequestFormValues>({ resolver: zodResolver(requestSchema) });
+
+  const regionId = watch("regionId");
+  const cityId = watch("cityId");
+  const districtId = watch("districtId");
+
+  // Марка → Модель: same reference and fallback-preservation rule as
+  // ListingForm (Stage 8Б-5) — see modelsByMake's doc comment.
+  const make = watch("make");
+  const currentModel = watch("model");
+  const makeRegister = register("make");
+  const knownModels = make ? (modelsByMake[make] ?? []) : [];
+  const modelOptions =
+    currentModel && !knownModels.includes(currentModel)
+      ? [currentModel, ...knownModels]
+      : knownModels;
+
+  // Same derivation as ListingForm's create path (Stage 5Б): the legacy
+  // `region` text — still what Match reads — is the selected city's name
+  // if any, else the region's, reusing the same react-query cache
+  // LocationSelector itself populates.
+  const regionsForTextQuery = useQuery({
+    queryKey: ["locations", "regions"],
+    queryFn: listRegions,
+    staleTime: 5 * 60 * 1000,
+  });
+  const citiesForTextQuery = useQuery({
+    queryKey: ["locations", "cities", regionId],
+    queryFn: () => listCitiesByRegion(regionId as string),
+    enabled: Boolean(regionId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  function handleLocationChange(next: LocationValue) {
+    setValue("regionId", next.regionId, { shouldValidate: true });
+    setValue("cityId", next.cityId, { shouldValidate: true });
+    setValue("districtId", next.districtId, { shouldValidate: true });
+
+    const regionName = regionsForTextQuery.data?.find((r) => r.id === next.regionId)?.nameRu ?? "";
+    const cityName = citiesForTextQuery.data?.find((c) => c.id === next.cityId)?.nameRu ?? "";
+    setValue("region", cityName || regionName, { shouldValidate: true });
+  }
 
   const onSubmit = handleSubmit(async (values) => {
     setApiError(null);
     try {
-      await createRequest(token as string, values);
+      const { regionId: locRegionId, cityId: locCityId, districtId: locDistrictId, ...rest } = values;
+      await createRequest(token as string, {
+        ...rest,
+        regionId: locRegionId ?? undefined,
+        cityId: locCityId ?? undefined,
+        districtId: locDistrictId ?? undefined,
+      });
       await queryClient.invalidateQueries({ queryKey: ["dashboard", "requests"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
       router.push("/dashboard/requests");
@@ -48,21 +99,36 @@ export function RequestForm() {
     <form onSubmit={onSubmit} className="flex w-full flex-col gap-5">
       {apiError ? <p className="text-[13px] text-destructive">{apiError}</p> : null}
 
-      <Select label={t("quickSearch.make")} error={errors.make?.message} {...register("make")}>
+      <Select
+        label={t("quickSearch.make")}
+        error={errors.make?.message}
+        {...makeRegister}
+        onChange={(e) => {
+          makeRegister.onChange(e);
+          setValue("model", "", { shouldValidate: true });
+        }}
+      >
         <option value="">{t("listingForm.chooseMake")}</option>
-        {makes.map((make) => (
-          <option key={make} value={make}>
-            {make}
+        {makes.map((m) => (
+          <option key={m} value={m}>
+            {m}
           </option>
         ))}
       </Select>
 
-      <Input
+      <Select
         label={t("quickSearch.model")}
-        placeholder="Например: Camry"
         error={errors.model?.message}
+        disabled={!make}
         {...register("model")}
-      />
+      >
+        <option value="">{t("listingForm.chooseModel")}</option>
+        {modelOptions.map((model) => (
+          <option key={model} value={model}>
+            {model}
+          </option>
+        ))}
+      </Select>
 
       <div className="grid grid-cols-2 gap-3">
         <Select
@@ -91,14 +157,15 @@ export function RequestForm() {
         </Select>
       </div>
 
-      <Select label={t("quickSearch.region")} error={errors.region?.message} {...register("region")}>
-        <option value="">{t("listingForm.chooseRegion")}</option>
-        {regions.map((region) => (
-          <option key={region} value={region}>
-            {region}
-          </option>
-        ))}
-      </Select>
+      <div className="flex flex-col gap-1.5">
+        <LocationSelector
+          value={{ regionId: regionId ?? null, cityId: cityId ?? null, districtId: districtId ?? null }}
+          onChange={handleLocationChange}
+        />
+        {errors.region?.message ? (
+          <span className="text-[13px] text-destructive">{errors.region.message}</span>
+        ) : null}
+      </div>
 
       <Input
         label={t("requestForm.initialOffer")}
