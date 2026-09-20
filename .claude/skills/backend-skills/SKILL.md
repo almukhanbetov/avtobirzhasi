@@ -141,7 +141,7 @@ Backs `Car` + `SellerListing`.
 | color | text not null | |
 | steering_wheel | varchar not null default 'left' | `CHECK IN ('left','right')` |
 | description | text | freeform, shown on `/cars/:id` |
-| status | varchar not null default 'moderation' | `CHECK IN ('active','frozen','moderation','archived')` — new listings start `moderation` |
+| status | varchar not null default 'moderation' | `CHECK IN ('active','frozen','moderation','archived')` — the column default is unused in practice: `POST /api/listings` always sets `status` explicitly, and since Stage 8В-2 that's `active` (immediate publish, no mandatory pre-approval queue) |
 | is_exchange | boolean not null default false | true if this listing participates in Auto Exchange |
 | initial_price | bigint | only set when `is_exchange`; `price` decays from this, see Exchange engine |
 | exchange_started_at | timestamptz | only set when `is_exchange` |
@@ -361,7 +361,7 @@ separate `GET /api/sellers/:id`), plus `description`.
 excluding self, limit 4 (mirrors `components/cars/SimilarCars.tsx`).
 
 ### Listings management (seller) → `/sell/new`, dashboard "Мои объявления"
-- `POST /api/listings` (auth) — create, status starts `moderation`.
+- `POST /api/listings` (auth) — create, status starts `active` (publishes immediately — Stage 8В-2; the `moderation` status and the admin approve/reject endpoints (`internal/handlers/moderation.go`) still exist for any listing routed there by other means, just no longer gate a normal listing's first publication).
 - `PATCH /api/listings/:id` (auth, owner only)
 - `DELETE /api/listings/:id` (auth, owner only) — soft delete → `archived`.
 - `GET /api/dashboard/listings` (auth) → this user's listings, any status.
