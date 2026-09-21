@@ -270,7 +270,49 @@ jobs:
             set -e
             cd "${{ secrets.VPS_PATH }}"
 
-            chmod +x scripts/backup-db.sh scripts/restore-db.sh
+            chmod +x scripts/backup-db.sh scripts/restore-db.sh scripts/backup-uploads.sh
+            mkdir -p backups
+
+            # Stage 9Б-9: fresh backup of the uploads volume (seller listing
+            # photos) taken right here, before anything below touches the
+            # database or containers — unlike Postgres (which already has a
+            # daily cron, checked below), nothing else creates uploads
+            # backups yet, so this deploy's own backup is the only one that
+            # can exist at this point. `set -e` means any failure inside
+            # backup-uploads.sh (volume unresolvable, tar/gzip failure, an
+            # empty archive) stops the script here — migrations and the
+            # importer below never run without a fresh photo backup on disk.
+            BACKUP_DIR=./backups ./scripts/backup-uploads.sh
+
+            # Stage 9Б-8: refuse to touch the database at all unless a
+            # PostgreSQL backup already exists (the daily cron this same
+            # job installs below, or a manual run) — `set -e` turns a
+            # missing backup into a failed job here, before `pull` or
+            # migrations ever run. This only checks for *existence*: a
+            # backup written by this cron/script is a valid pg_dump
+            # (verified below at "prove the backup mechanism actually
+            # works"), so it isn't re-validated here.
+            LATEST_DB_BACKUP=$(ls -t backups/avtobirzhasi_*.sql.gz 2>/dev/null | head -1)
+            if [ -z "$LATEST_DB_BACKUP" ]; then
+              echo "ERROR: no PostgreSQL backup found in ./backups — refusing to run migrations without one." >&2
+              echo "Run 'BACKUP_DIR=./backups RETENTION_DAYS=14 ./scripts/backup-db.sh' manually first." >&2
+              exit 1
+            fi
+            echo "Pre-deploy PostgreSQL backup present: $LATEST_DB_BACKUP"
+
+            # Stage 9Б-8: record the currently-running image digests before
+            # `pull` overwrites what `:latest` points to — this repo's
+            # images are tagged `:latest` only, so this file is the only
+            # way to know which digest to roll back to afterward. Uses
+            # `|| echo` so a first-ever deploy (containers not running
+            # yet) doesn't fail the job over this.
+            {
+              echo "# Pre-deploy image digests — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              docker inspect --format='backend  {{.Id}}  {{index .RepoDigests 0}}' avtobirzhasi_backend 2>/dev/null \
+                || echo "backend: not running (first deploy?)"
+              docker inspect --format='frontend {{.Id}}  {{index .RepoDigests 0}}' avtobirzhasi_frontend 2>/dev/null \
+                || echo "frontend: not running (first deploy?)"
+            } > "backups/pre-deploy-images-$(date -u +%Y%m%dT%H%M%SZ).txt"
 
             docker compose -f docker-compose.prod.yml pull
             # Migrations run once, from the freshly-pulled backend image,
@@ -281,6 +323,20 @@ jobs:
             # migrations up is idempotent, so re-running this on a
             # database already at the latest version is a safe no-op.
             docker compose -f docker-compose.prod.yml run --rm --entrypoint sh backend -c './goose -dir migrations postgres "$DATABASE_URL" up'
+
+            # Stage 9Б-8: Kazakhstan region/city/district reference-data
+            # importer (backend/cmd/import-locations, built into the image
+            # at /app/import-locations — see backend/Dockerfile). Runs once
+            # per deploy as a one-off container, after migrations create
+            # the regions/cities/districts tables and before `up -d` cuts
+            # traffic over to the new containers, so requests never hit a
+            # freshly-migrated-but-unseeded reference table. Never part of
+            # the image's own ENTRYPOINT, so it does not run on every API
+            # start. Idempotent (upserts by slug) — safe to re-run.
+            # `set -e` means a failure here stops the script before `up -d`
+            # runs, exactly like a migration failure above.
+            docker compose -f docker-compose.prod.yml run --rm --entrypoint sh backend -c './import-locations'
+
             docker compose -f docker-compose.prod.yml up -d
             docker image prune -f
             docker compose -f docker-compose.prod.yml ps
@@ -301,7 +357,6 @@ jobs:
 
             # --- Stage 8D: prove the backup mechanism actually works on
             # THIS deploy, not just that it was installed for later ---
-            mkdir -p backups
             BACKUP_DIR=./backups RETENTION_DAYS=14 ./scripts/backup-db.sh
             LATEST_BACKUP=$(ls -t ./backups/avtobirzhasi_*.sql.gz 2>/dev/null | head -1)
             if [ -z "$LATEST_BACKUP" ] || [ ! -s "$LATEST_BACKUP" ]; then
