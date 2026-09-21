@@ -126,8 +126,14 @@ func (r *ListingRepository) List(ctx context.Context, f ListingFilters) ([]model
 	if f.Make != "" {
 		add("make = $%d", f.Make)
 	}
+	// Exact match, not ILIKE: `model` has been a curated <select> bound to
+	// frontend/lib/mock/cars.ts's modelsByMake since Stage 8Б-5, not free
+	// text, so a substring match is actively wrong — e.g. selecting
+	// Toyota "Land Cruiser" also matched "Land Cruiser Prado" listings,
+	// and Mazda "3" also matched "CX-3"/"CX-30", via the old
+	// `(make || ' ' || model) ILIKE '%model%'` pattern.
 	if f.Model != "" {
-		add("(make || ' ' || model) ILIKE $%d", "%"+f.Model+"%")
+		add("model = $%d", f.Model)
 	}
 	if f.YearFrom != nil {
 		add("year >= $%d", *f.YearFrom)
