@@ -73,6 +73,21 @@ jobs:
       - name: go vet
         run: go vet ./...
 
+      # Migrations only create the regions/cities/districts tables — they
+      # start empty. Every location-integration test (create/update
+      # listings and buyer requests with a region, /api/cars filters,
+      # etc.) looks up a real seeded region/city/district by name and
+      # fails with "no rows in result set" without this step — confirmed
+      # by reproducing the exact CI error locally against a fresh,
+      # migrated-but-unseeded database (see docs/LOCATION_QA_REPORT.md).
+      # cmd/import-locations reads DATABASE_URL (config.Load()), not
+      # TEST_DATABASE_URL (a testutil-only convention for the Go test
+      # binary itself), so it's set explicitly here, to the same CI
+      # database the tests below and the migrations above both use.
+      # Idempotent (upserts by slug) — safe to re-run on every CI run.
+      - name: Import Kazakhstan location reference data
+        run: DATABASE_URL="$TEST_DATABASE_URL" go run ./cmd/import-locations
+
       # Stage 6 established that these integration tests share one test
       # database (self-match, price-bypass, deposit-pay fixtures) and must
       # not run as separate concurrent packages — see
