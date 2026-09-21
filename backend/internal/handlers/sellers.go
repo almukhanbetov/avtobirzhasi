@@ -20,9 +20,17 @@ func NewSellersHandler(users *repository.UserRepository, listings *repository.Li
 	return &SellersHandler{users: users, listings: listings}
 }
 
-// RegisterSellersRoutes wires the public seller-profile route. No
-// authentication required — see sellerResponse's doc comment for why the
-// phone number here is public.
+// RegisterSellersRoutes wires the public seller-profile route.
+//
+// Stage 9Б-17: deliberately left without middleware.Auth. This is the car
+// detail page's "Продавец" card (name/rating/review count/active
+// listings), viewed by anonymous catalog browsers on every listing page,
+// not just logged-in users — requiring auth here would break normal
+// browsing for no security benefit, now that sellerResponse structurally
+// has no Phone field to protect (see its doc comment). Authorization
+// alone was never the right gate for a phone number anyway: the actual
+// contact-reveal rule (deposit-confirmed Match, re-checked server-side
+// per request) lives only in MatchesHandler.Get.
 func RegisterSellersRoutes(router *gin.RouterGroup, h *SellersHandler) {
 	router.GET("/sellers/:id", h.Get)
 }

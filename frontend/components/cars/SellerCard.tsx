@@ -3,7 +3,6 @@
 import { Star } from "lucide-react";
 import type { Seller } from "@/types/seller";
 import { Badge } from "@/components/ui/Badge";
-import { PhoneReveal } from "@/components/cars/PhoneReveal";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 function initials(name: string): string {
@@ -53,10 +52,6 @@ export function SellerCard({ seller }: { seller: Seller }) {
             ({seller.reviewsCount} {t("seller.reviewsSuffix")})
           </span>
         </div>
-      </div>
-
-      <div className="sm:max-w-xs">
-        <PhoneReveal phone={seller.phone} />
       </div>
     </div>
   );
