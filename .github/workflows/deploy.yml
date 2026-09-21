@@ -255,7 +255,7 @@ jobs:
           # file at all, and drone-scp's `tar` refuses to create an empty
           # archive. Confirmed by reproducing the exact failure with the
           # real drone-scp v1.8.0 binary locally before fixing this line.
-          source: "docker-compose.prod.yml,scripts/backup-db.sh,scripts/restore-db.sh"
+          source: "docker-compose.prod.yml,scripts/backup-db.sh,scripts/restore-db.sh,scripts/backup-uploads.sh"
           target: ${{ secrets.VPS_PATH }}
           overwrite: true
 
