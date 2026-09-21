@@ -104,6 +104,13 @@ export const translations = {
 
     "quickSearch.region": "Регион",
     "quickSearch.anyRegion": "Любой регион",
+
+    "locationSelector.city": "Город",
+    "locationSelector.chooseCity": "Выберите город",
+    "locationSelector.district": "Район",
+    "locationSelector.chooseDistrict": "Выберите район",
+    "locationSelector.loadError": "Не удалось загрузить список, попробуйте позже",
+
     "quickSearch.make": "Марка",
     "quickSearch.anyMake": "Любая марка",
     "quickSearch.model": "Модель",
@@ -515,6 +522,7 @@ export const translations = {
 
     "listingForm.stepBasics": "Основное",
     "listingForm.chooseMake": "Выберите марку",
+    "listingForm.chooseModel": "Выберите модель",
     "listingForm.year": "Год выпуска",
     "listingForm.mileage": "Пробег, км",
     "listingForm.chooseRegion": "Выберите регион",
@@ -561,7 +569,7 @@ export const translations = {
     "listingForm.editError": "Не удалось сохранить изменения",
 
     "sellNew.description":
-      "Заполните данные об автомобиле — объявление появится после модерации.",
+      "Заполните данные об автомобиле — объявление сразу появится в каталоге.",
 
     "requestForm.yearFrom": "Год от",
     "requestForm.yearTo": "Год до",
@@ -689,6 +697,13 @@ export const translations = {
 
     "quickSearch.region": "Аймақ",
     "quickSearch.anyRegion": "Кез келген аймақ",
+
+    "locationSelector.city": "Қала",
+    "locationSelector.chooseCity": "Қаланы таңдаңыз",
+    "locationSelector.district": "Аудан",
+    "locationSelector.chooseDistrict": "Ауданды таңдаңыз",
+    "locationSelector.loadError": "Тізімді жүктеу мүмкін болмады, кейінірек көріңіз",
+
     "quickSearch.make": "Марка",
     "quickSearch.anyMake": "Кез келген марка",
     "quickSearch.model": "Модель",
@@ -1101,6 +1116,7 @@ export const translations = {
 
     "listingForm.stepBasics": "Негізгі",
     "listingForm.chooseMake": "Марканы таңдаңыз",
+    "listingForm.chooseModel": "Модельді таңдаңыз",
     "listingForm.year": "Шығарылған жылы",
     "listingForm.mileage": "Жүрісі, км",
     "listingForm.chooseRegion": "Аймақты таңдаңыз",
@@ -1147,7 +1163,7 @@ export const translations = {
     "listingForm.editError": "Өзгерістерді сақтау мүмкін болмады",
 
     "sellNew.description":
-      "Автокөлік туралы деректерді толтырыңыз — хабарландыру модерациядан кейін пайда болады.",
+      "Автокөлік туралы деректерді толтырыңыз — хабарландыру бірден каталогта пайда болады.",
 
     "requestForm.yearFrom": "Жылдан",
     "requestForm.yearTo": "Жылға дейін",

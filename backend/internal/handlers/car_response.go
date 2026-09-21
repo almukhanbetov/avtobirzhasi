@@ -16,6 +16,9 @@ type carResponse struct {
 	Price              int64    `json:"price"`
 	MileageKm          int      `json:"mileageKm"`
 	Region             string   `json:"region"`
+	RegionID           *string  `json:"regionId,omitempty"`
+	CityID             *string  `json:"cityId,omitempty"`
+	DistrictID         *string  `json:"districtId,omitempty"`
 	Transmission       string   `json:"transmission"`
 	FuelType           string   `json:"fuelType"`
 	BodyType           string   `json:"bodyType"`
@@ -42,6 +45,9 @@ func toCarResponse(l models.Listing) carResponse {
 		Price:         l.Price,
 		MileageKm:     l.MileageKm,
 		Region:        l.Region,
+		RegionID:      l.RegionID,
+		CityID:        l.CityID,
+		DistrictID:    l.DistrictID,
 		Transmission:  l.Transmission,
 		FuelType:      l.FuelType,
 		BodyType:      l.BodyType,

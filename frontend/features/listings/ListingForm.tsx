@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFieldArray, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
@@ -21,7 +21,7 @@ import { updateAdminListing } from "@/lib/api/admin";
 import type { SellerListing } from "@/types/dashboard";
 import { ApiError } from "@/lib/api/client";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { makes, regions } from "@/lib/mock/cars";
+import { makes, modelsByMake } from "@/lib/mock/cars";
 import {
   bodyTypeLabels,
   drivetrainLabels,
@@ -30,6 +30,8 @@ import {
   transmissionLabels,
 } from "@/lib/labels/car";
 import { ImageUploadField } from "@/features/listings/ImageUploadField";
+import { LocationSelector, type LocationValue } from "@/features/location/LocationSelector";
+import { listRegions, listCitiesByRegion, resolveLegacyRegionText } from "@/lib/api/locations";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 const TOTAL_STEPS = 3;
@@ -63,6 +65,7 @@ export function ListingForm({
     trigger,
     control,
     watch,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<ListingFormValues>({
     resolver: zodResolver(listingSchema),
@@ -74,6 +77,9 @@ export function ListingForm({
             year: listing.car.year,
             mileageKm: listing.car.mileageKm,
             region: listing.car.region,
+            regionId: listing.car.regionId ?? null,
+            cityId: listing.car.cityId ?? null,
+            districtId: listing.car.districtId ?? null,
             transmission: listing.car.transmission,
             fuelType: listing.car.fuelType,
             bodyType: listing.car.bodyType,
@@ -96,6 +102,77 @@ export function ListingForm({
   });
 
   const saleMode = watch("saleMode");
+  const regionId = watch("regionId");
+  const cityId = watch("cityId");
+  const districtId = watch("districtId");
+
+  // Марка → Модель: the model <Select> only offers the selected make's
+  // known models, plus the currently saved model itself if it isn't one
+  // of them (an existing listing's model must never disappear from the
+  // options just because the reference list doesn't happen to include
+  // it — see modelsByMake's own doc comment in lib/mock/cars.ts).
+  const make = watch("make");
+  const currentModel = watch("model");
+  const makeRegister = register("make");
+  const knownModels = make ? (modelsByMake[make] ?? []) : [];
+  const modelOptions =
+    currentModel && !knownModels.includes(currentModel)
+      ? [currentModel, ...knownModels]
+      : knownModels;
+
+  // LocationSelector (Stage 5А) only carries UUIDs. The legacy `region`
+  // text field — still what Match reads — is derived here from whichever
+  // name is most specific (city, else region), reusing the same
+  // react-query cache LocationSelector itself populates. Used by both
+  // create (Stage 5Б) and edit (Stage 5В).
+  const regionsForTextQuery = useQuery({
+    queryKey: ["locations", "regions"],
+    queryFn: listRegions,
+    staleTime: 5 * 60 * 1000,
+  });
+  const citiesForTextQuery = useQuery({
+    queryKey: ["locations", "cities", regionId],
+    queryFn: () => listCitiesByRegion(regionId as string),
+    enabled: Boolean(regionId),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  function handleLocationChange(next: LocationValue) {
+    setValue("regionId", next.regionId, { shouldValidate: true });
+    setValue("cityId", next.cityId, { shouldValidate: true });
+    setValue("districtId", next.districtId, { shouldValidate: true });
+
+    const regionName = regionsForTextQuery.data?.find((r) => r.id === next.regionId)?.nameRu ?? "";
+    const cityName = citiesForTextQuery.data?.find((c) => c.id === next.cityId)?.nameRu ?? "";
+    setValue("region", cityName || regionName, { shouldValidate: true });
+  }
+
+  // Stage 5В: an old listing may have only the free-text `region` (no
+  // regionId) — try an exact match against the reference data once, and
+  // silently adopt it into the form's (client-side only) state so the
+  // already-loaded LocationSelector shows the right region/city as soon
+  // as it resolves. Never written to PostgreSQL by itself — only the
+  // user's own explicit "Сохранить изменения" click does that (onSubmit
+  // sends whatever regionId/cityId are in the form at that point, exactly
+  // like any other field). If the user has already picked a location by
+  // hand before this resolves, or if the match is ambiguous, nothing is
+  // applied and the choice stays with the user.
+  const needsLegacyMatch = isEdit && !!listing && !listing.car.regionId && !!listing.car.region;
+  const legacyMatchAppliedRef = useRef(false);
+  const legacyMatchQuery = useQuery({
+    queryKey: ["locations", "legacy-match", listing?.car.region],
+    queryFn: () => resolveLegacyRegionText(listing!.car.region),
+    enabled: needsLegacyMatch,
+    staleTime: Infinity,
+  });
+  useEffect(() => {
+    if (!needsLegacyMatch || legacyMatchAppliedRef.current || !legacyMatchQuery.data) return;
+    if (watch("regionId")) return; // user already picked something by hand
+    legacyMatchAppliedRef.current = true;
+    setValue("regionId", legacyMatchQuery.data.regionId, { shouldValidate: true });
+    setValue("cityId", legacyMatchQuery.data.cityId, { shouldValidate: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsLegacyMatch, legacyMatchQuery.data]);
 
   const imageFieldArray = useFieldArray({ control, name: "images" });
 
@@ -111,11 +188,20 @@ export function ListingForm({
   const onSubmit = handleSubmit(async (values) => {
     setApiError(null);
     try {
-      const { saleMode: chosenMode, images, ...rest } = values;
+      // regionId/cityId/districtId are destructured out here and
+      // re-attached explicitly below to each payload, so `rest`'s spread
+      // never silently carries them into a type that doesn't expect them.
+      const { saleMode: chosenMode, images, regionId: locRegionId, cityId: locCityId, districtId: locDistrictId, ...rest } = values;
       const imageUrls = images.map((image) => image.url);
 
       if (isEdit && listing) {
-        const payload: UpdateListingInput = { ...rest, images: imageUrls };
+        const payload: UpdateListingInput = {
+          ...rest,
+          images: imageUrls,
+          regionId: locRegionId ?? undefined,
+          cityId: locCityId ?? undefined,
+          districtId: locDistrictId ?? undefined,
+        };
         if (priceLocked) delete payload.price; // exchange price is engine-managed
         if (admin) {
           await updateAdminListing(token as string, listing.id, payload);
@@ -136,6 +222,9 @@ export function ListingForm({
         ...rest,
         isExchange: chosenMode === "exchange",
         images: imageUrls,
+        regionId: locRegionId ?? undefined,
+        cityId: locCityId ?? undefined,
+        districtId: locDistrictId ?? undefined,
       });
       await queryClient.invalidateQueries({ queryKey: ["dashboard", "listings"] });
       await queryClient.invalidateQueries({ queryKey: ["dashboard", "overview"] });
@@ -176,20 +265,35 @@ export function ListingForm({
       {showStep(1) ? (
         <div className="flex flex-col gap-5">
           <h2 className="text-[17px] font-semibold text-foreground">{t("listingForm.stepBasics")}</h2>
-          <Select label={t("quickSearch.make")} error={errors.make?.message} {...register("make")}>
+          <Select
+            label={t("quickSearch.make")}
+            error={errors.make?.message}
+            {...makeRegister}
+            onChange={(e) => {
+              makeRegister.onChange(e);
+              setValue("model", "", { shouldValidate: true });
+            }}
+          >
             <option value="">{t("listingForm.chooseMake")}</option>
-            {makes.map((make) => (
-              <option key={make} value={make}>
-                {make}
+            {makes.map((m) => (
+              <option key={m} value={m}>
+                {m}
               </option>
             ))}
           </Select>
-          <Input
+          <Select
             label={t("quickSearch.model")}
-            placeholder="Например: Camry"
             error={errors.model?.message}
+            disabled={!make}
             {...register("model")}
-          />
+          >
+            <option value="">{t("listingForm.chooseModel")}</option>
+            {modelOptions.map((model) => (
+              <option key={model} value={model}>
+                {model}
+              </option>
+            ))}
+          </Select>
           <div className="grid grid-cols-2 gap-3">
             <Input
               label={t("listingForm.year")}
@@ -208,14 +312,15 @@ export function ListingForm({
               {...register("mileageKm", { valueAsNumber: true })}
             />
           </div>
-          <Select label={t("quickSearch.region")} error={errors.region?.message} {...register("region")}>
-            <option value="">{t("listingForm.chooseRegion")}</option>
-            {regions.map((region) => (
-              <option key={region} value={region}>
-                {region}
-              </option>
-            ))}
-          </Select>
+          <div className="flex flex-col gap-1.5">
+            <LocationSelector
+              value={{ regionId: regionId ?? null, cityId: cityId ?? null, districtId: districtId ?? null }}
+              onChange={handleLocationChange}
+            />
+            {errors.region?.message ? (
+              <span className="text-[13px] text-destructive">{errors.region.message}</span>
+            ) : null}
+          </div>
         </div>
       ) : null}
 

@@ -11,6 +11,13 @@ export const sortOptionValues: SortOption[] = [
 
 export interface CarFilters {
   region: string;
+  // Structured location (Stage 7А) — kept alongside the legacy `region`
+  // text above for old links/backend compatibility; see FilterForm.tsx
+  // and backend ListingRepository.List for the priority rule between
+  // them. null (not "") to match LocationSelector's own LocationValue.
+  regionId: string | null;
+  cityId: string | null;
+  districtId: string | null;
   make: string;
   model: string;
   yearFrom: number | null;
@@ -40,6 +47,9 @@ export function parseCarFilters(searchParams: RawSearchParams): CarFilters {
 
   return {
     region: getParam(searchParams, "region"),
+    regionId: getParam(searchParams, "regionId") || null,
+    cityId: getParam(searchParams, "cityId") || null,
+    districtId: getParam(searchParams, "districtId") || null,
     make: getParam(searchParams, "make"),
     model: getParam(searchParams, "model").trim(),
     yearFrom: toNumberOrNull(getParam(searchParams, "yearFrom")),
@@ -57,7 +67,10 @@ export function parseCarFilters(searchParams: RawSearchParams): CarFilters {
 
 export function countActiveFilters(filters: CarFilters): number {
   return [
-    filters.region,
+    // One combined entry — city/district are a refinement of the same
+    // "location" filter, not separate categories (matches the old
+    // single flat region select's counting behavior).
+    filters.regionId || filters.region,
     filters.make,
     filters.model,
     filters.yearFrom,

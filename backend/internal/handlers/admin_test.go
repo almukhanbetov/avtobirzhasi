@@ -30,11 +30,12 @@ func newAdminTestServer(pool *pgxpool.Pool) *httptest.Server {
 	matchRepo := repository.NewMatchRepository(repo)
 	depositRepo := repository.NewDepositRepository(repo)
 	adminRepo := repository.NewAdminRepository(pool)
+	locationRepo := repository.NewLocationRepository(repo)
 
 	adminAPI := router.Group("/api/admin", middleware.Auth(testJWTSecret), middleware.AdminOnly(userRepo))
 	handlers.RegisterModerationRoutes(adminAPI, handlers.NewModerationHandler(listingRepo, userRepo))
 	handlers.RegisterAdminStatsRoutes(adminAPI, handlers.NewAdminStatsHandler(adminRepo))
-	handlers.RegisterAdminListingsRoutes(adminAPI, handlers.NewAdminListingsHandler(listingRepo, userRepo))
+	handlers.RegisterAdminListingsRoutes(adminAPI, handlers.NewAdminListingsHandler(listingRepo, userRepo, locationRepo))
 	handlers.RegisterAdminRequestsRoutes(adminAPI, handlers.NewAdminRequestsHandler(requestRepo, userRepo))
 	handlers.RegisterAdminMatchesRoutes(adminAPI, handlers.NewAdminMatchesHandler(matchRepo))
 	handlers.RegisterAdminDepositsRoutes(adminAPI, handlers.NewAdminDepositsHandler(depositRepo))

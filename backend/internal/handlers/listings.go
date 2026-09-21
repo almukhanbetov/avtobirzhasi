@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"time"
@@ -15,12 +16,13 @@ import (
 // ListingsHandler wires the authenticated /api/listings and
 // /api/dashboard/listings routes.
 type ListingsHandler struct {
-	listings *repository.ListingRepository
+	listings  *repository.ListingRepository
+	locations *repository.LocationRepository
 }
 
 // NewListingsHandler creates a ListingsHandler.
-func NewListingsHandler(listings *repository.ListingRepository) *ListingsHandler {
-	return &ListingsHandler{listings: listings}
+func NewListingsHandler(listings *repository.ListingRepository, locations *repository.LocationRepository) *ListingsHandler {
+	return &ListingsHandler{listings: listings, locations: locations}
 }
 
 // RegisterListingsWriteRoutes wires the seller-facing listing management
@@ -50,10 +52,108 @@ type createListingRequest struct {
 	Description   string   `json:"description"`
 	Images        []string `json:"images" binding:"required,min=1"`
 	IsExchange    bool     `json:"isExchange"`
+	// Stage 5Б: optional structured location, alongside the legacy Region
+	// text above (which stays required and is what Match reads). CityID
+	// must belong to RegionID; DistrictID must belong to CityID —
+	// verified against the regions/cities/districts reference tables in
+	// Create, not just shape-validated here.
+	RegionID   *string `json:"regionId" binding:"omitempty,uuid"`
+	CityID     *string `json:"cityId" binding:"omitempty,uuid"`
+	DistrictID *string `json:"districtId" binding:"omitempty,uuid"`
 }
 
-// Create handles POST /api/listings. New listings always start in
-// "moderation" — see SKILL.md.
+// validLocation checks that a submitted (regionId, cityId, districtId)
+// triple is internally consistent — region exists; a given city belongs
+// to that region; a given district belongs to that city — writing the
+// 400 response itself and returning false if not. Any of the three may
+// be nil (nothing chosen at that level is valid — a region alone is
+// enough, a district is never required). A free function (not a
+// *ListingsHandler method) so ListingsHandler.Create/Update and
+// AdminListingsHandler.Update share the exact same check.
+func validLocation(c *gin.Context, locations *repository.LocationRepository, regionID, cityID, districtID *string) bool {
+	ctx := c.Request.Context()
+
+	if regionID != nil {
+		exists, err := locations.RegionExists(ctx, *regionID)
+		if err != nil {
+			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось проверить регион")
+			return false
+		}
+		if !exists {
+			respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", "Указанный регион не найден")
+			return false
+		}
+	}
+
+	if cityID != nil {
+		if regionID == nil {
+			respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", "Город указан без региона")
+			return false
+		}
+		cityRegionID, ok, err := locations.CityRegionID(ctx, *cityID)
+		if err != nil {
+			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось проверить город")
+			return false
+		}
+		if !ok || cityRegionID != *regionID {
+			respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", "Город не принадлежит указанному региону")
+			return false
+		}
+	}
+
+	if districtID != nil {
+		if cityID == nil {
+			respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", "Район указан без города")
+			return false
+		}
+		districtCityID, ok, err := locations.DistrictCityID(ctx, *districtID)
+		if err != nil {
+			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось проверить район")
+			return false
+		}
+		if !ok || districtCityID != *cityID {
+			respondError(c, http.StatusBadRequest, "VALIDATION_ERROR", "Район не принадлежит указанному городу")
+			return false
+		}
+	}
+
+	return true
+}
+
+// resolveLocationText derives the authoritative legacy `region` text to
+// store from a structured location, once regionId is present — the
+// city's name if cityId is also given (the legacy field has always held
+// a city name, not an oblast one — see docs/LOCATION_IMPLEMENTATION.md
+// Stage 1), else the region's name. ok is false when regionID is nil —
+// callers then keep whatever `region` text they already had (the legacy
+// path, unchanged). Client-sent region text is never trusted once
+// regionID is present (Stage 5В) — validLocation must have already
+// confirmed the ids are consistent before this is called.
+func resolveLocationText(ctx context.Context, locations *repository.LocationRepository, regionID, cityID *string) (text string, ok bool, err error) {
+	if regionID == nil {
+		return "", false, nil
+	}
+	if cityID != nil {
+		name, found, err := locations.CityName(ctx, *cityID)
+		if err != nil || !found {
+			return "", false, err
+		}
+		return name, true, nil
+	}
+	name, found, err := locations.RegionName(ctx, *regionID)
+	if err != nil || !found {
+		return "", false, err
+	}
+	return name, true, nil
+}
+
+// Create handles POST /api/listings. New listings publish immediately as
+// "active" — Stage 8В-2 removed the mandatory pre-publication moderation
+// queue a new listing used to sit in; every other admission check below
+// (auth, required fields, photos, location, price) still applies exactly
+// as before, and the moderation queue/approve/reject endpoints
+// (ModerationHandler) still exist for any listing an admin routes there
+// by other means — see SKILL.md.
 func (h *ListingsHandler) Create(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
 
@@ -73,6 +173,17 @@ func (h *ListingsHandler) Create(c *gin.Context) {
 		description = &req.Description
 	}
 
+	if !validLocation(c, h.locations, req.RegionID, req.CityID, req.DistrictID) {
+		return
+	}
+	regionText := req.Region
+	if derived, ok, err := resolveLocationText(c.Request.Context(), h.locations, req.RegionID, req.CityID); err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось создать объявление, попробуйте позже")
+		return
+	} else if ok {
+		regionText = derived
+	}
+
 	listing := &models.Listing{
 		UserID:        userID,
 		Make:          req.Make,
@@ -80,7 +191,10 @@ func (h *ListingsHandler) Create(c *gin.Context) {
 		Year:          req.Year,
 		Price:         req.Price,
 		MileageKm:     req.MileageKm,
-		Region:        req.Region,
+		Region:        regionText,
+		RegionID:      req.RegionID,
+		CityID:        req.CityID,
+		DistrictID:    req.DistrictID,
 		Transmission:  req.Transmission,
 		FuelType:      req.FuelType,
 		BodyType:      req.BodyType,
@@ -90,15 +204,15 @@ func (h *ListingsHandler) Create(c *gin.Context) {
 		Color:         req.Color,
 		SteeringWheel: steeringWheel,
 		Description:   description,
-		Status:        "moderation",
+		Status:        "active",
 		IsExchange:    req.IsExchange,
 	}
 	if req.IsExchange {
 		// A listing declared as Auto Exchange at creation starts its
-		// participation right away — see the Exchange engine's decay
-		// query (only status='active' listings move, so nothing happens
-		// until moderation approves it, but the starting price/timestamp
-		// are recorded from the moment the seller opted in).
+		// participation right away — the Exchange engine's decay query
+		// only ever moves status='active' listings, which this now is
+		// immediately, so the starting price/timestamp recorded here are
+		// exactly when daily decay and matching begin.
 		startedAt := time.Now()
 		listing.InitialPrice = &req.Price
 		listing.ExchangeStartedAt = &startedAt
@@ -142,6 +256,16 @@ type updateListingRequest struct {
 	SteeringWheel *string   `json:"steeringWheel" binding:"omitempty,oneof=left right"`
 	Description   *string   `json:"description"`
 	Images        *[]string `json:"images" binding:"omitempty,min=1,max=10,dive,url"`
+	// Stage 5В: same rules as createListingRequest — omitempty,uuid shape
+	// check here, full existence/ownership-chain check in validLocation.
+	// When RegionID is present, CityID/DistrictID (even if absent, i.e.
+	// nil) fully replace the stored location together — an owner who
+	// changes region without re-picking a city must not keep the old
+	// city/district; changing city without a district must not keep the
+	// old district. See buildListingFieldUpdate.
+	RegionID   *string `json:"regionId" binding:"omitempty,uuid"`
+	CityID     *string `json:"cityId" binding:"omitempty,uuid"`
+	DistrictID *string `json:"districtId" binding:"omitempty,uuid"`
 }
 
 // buildListingFieldUpdate maps a partial updateListingRequest onto the
@@ -178,6 +302,25 @@ func buildListingFieldUpdate(listing *models.Listing, req updateListingRequest) 
 	}
 	if req.EnginePower != nil {
 		fields["engine_power"] = *req.EnginePower
+	}
+
+	// The location trio is replaced as a whole whenever regionId is sent
+	// (validLocation has already confirmed cityId/districtId, if any,
+	// belong to it) — never a partial patch of just one of the three, so
+	// a region change can't leave a stale city/district behind, and a
+	// city change can't leave a stale district behind.
+	if req.RegionID != nil {
+		fields["region_id"] = *req.RegionID
+		if req.CityID != nil {
+			fields["city_id"] = *req.CityID
+		} else {
+			fields["city_id"] = nil
+		}
+		if req.DistrictID != nil {
+			fields["district_id"] = *req.DistrictID
+		} else {
+			fields["district_id"] = nil
+		}
 	}
 
 	var priceEdit *repository.PriceEdit
@@ -240,6 +383,16 @@ func (h *ListingsHandler) Update(c *gin.Context) {
 	if req.Price != nil && listing.IsExchange {
 		respondError(c, http.StatusConflict, "EXCHANGE_MANAGED_FIELD", "Цена управляется автообменом и не может быть изменена вручную")
 		return
+	}
+
+	if !validLocation(c, h.locations, req.RegionID, req.CityID, req.DistrictID) {
+		return
+	}
+	if derived, ok, err := resolveLocationText(c.Request.Context(), h.locations, req.RegionID, req.CityID); err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обновить объявление")
+		return
+	} else if ok {
+		req.Region = &derived
 	}
 
 	fields, priceEdit := buildListingFieldUpdate(listing, req)

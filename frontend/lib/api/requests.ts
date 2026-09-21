@@ -12,6 +12,11 @@ export interface CreateRequestInput {
   yearTo: number;
   region: string;
   initialOffer: number;
+  // Optional structured location (Stage 6А) — sent alongside the legacy
+  // `region` text above, which stays the Match-compatible field.
+  regionId?: string;
+  cityId?: string;
+  districtId?: string;
 }
 
 export function createRequest(
@@ -25,10 +30,18 @@ export function createRequest(
   });
 }
 
+export interface UpdateRequestInput {
+  region: string;
+  // Same optional structured location as CreateRequestInput (Stage 6Б).
+  regionId?: string;
+  cityId?: string;
+  districtId?: string;
+}
+
 export function updateRequest(
   token: string,
   id: string,
-  input: { region: string },
+  input: UpdateRequestInput,
 ): Promise<BuyerRequest> {
   return apiFetch<BuyerRequest>(`/requests/${id}`, {
     method: "PATCH",

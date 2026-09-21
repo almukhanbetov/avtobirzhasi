@@ -27,14 +27,23 @@ type User struct {
 // Exchange participation; IsExchange never implies a buyer role here (see
 // buyer_requests, added Stage 4, for the buyer side).
 type Listing struct {
-	ID                string
-	UserID            string
-	Make              string
-	Model             string
-	Year              int
-	Price             int64
-	MileageKm         int
-	Region            string
+	ID        string
+	UserID    string
+	Make      string
+	Model     string
+	Year      int
+	Price     int64
+	MileageKm int
+	Region    string
+	// RegionID/CityID/DistrictID are the Stage 5Б structured location —
+	// optional, alongside the legacy Region text Match still reads (see
+	// docs/LOCATION_IMPLEMENTATION.md Stage 5Б). CityID set implies
+	// RegionID set; DistrictID set implies CityID set (enforced by the
+	// handler, not the DB, since these are nullable FKs by design —
+	// migration 00014).
+	RegionID          *string
+	CityID            *string
+	DistrictID        *string
 	Transmission      string
 	FuelType          string
 	BodyType          string
@@ -60,13 +69,19 @@ type Listing struct {
 // no photographed car (see Listing's doc comment for why the buyer side
 // never lives on listings).
 type BuyerRequest struct {
-	ID           string
-	UserID       string
-	Make         string
-	Model        string
-	YearFrom     int
-	YearTo       int
-	Region       string
+	ID       string
+	UserID   string
+	Make     string
+	Model    string
+	YearFrom int
+	YearTo   int
+	Region   string
+	// RegionID/CityID/DistrictID — Stage 6А, same structured location as
+	// Listing (see its doc comment); optional, alongside the legacy
+	// Region text Match still reads.
+	RegionID     *string
+	CityID       *string
+	DistrictID   *string
 	InitialOffer int64
 	CurrentOffer int64
 	Status       string
@@ -79,17 +94,17 @@ type BuyerRequest struct {
 // except the terminal "expired"/"cancelled" states, which are set
 // explicitly — see SKILL.md's Matches section.
 type Match struct {
-	ID                 string
-	ListingID          string
-	BuyerRequestID     string
-	FinalPrice         int64
-	DepositAmount      int64
-	SellerDepositPaid  bool
-	BuyerDepositPaid   bool
-	Status             string
-	Deadline           time.Time
-	CreatedAt          time.Time
-	UpdatedAt          time.Time
+	ID                string
+	ListingID         string
+	BuyerRequestID    string
+	FinalPrice        int64
+	DepositAmount     int64
+	SellerDepositPaid bool
+	BuyerDepositPaid  bool
+	Status            string
+	Deadline          time.Time
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 // Deposit backs the frontend's Deposit type (frontend/types/dashboard.ts).
@@ -110,12 +125,43 @@ type Deposit struct {
 // Notification backs the frontend's Notification type
 // (frontend/types/dashboard.ts).
 type Notification struct {
-	ID                string
-	UserID            string
-	Type              string
-	Message           string
-	Read              bool
-	RelatedMatchID    *string
-	RelatedListingID  *string
-	CreatedAt         time.Time
+	ID               string
+	UserID           string
+	Type             string
+	Message          string
+	Read             bool
+	RelatedMatchID   *string
+	RelatedListingID *string
+	CreatedAt        time.Time
+}
+
+// Region is a top-level administrative unit of Kazakhstan — an oblast or
+// a city of republican significance (Kind distinguishes them). Seeded by
+// cmd/import-locations; see docs/LOCATION_IMPLEMENTATION.md Stage 2/3.
+type Region struct {
+	ID     string
+	NameRU string
+	NameKZ string
+	Kind   string // oblast | republican_city
+}
+
+// City belongs to exactly one Region — including a republican-
+// significance region, whose sole city row represents the city itself.
+type City struct {
+	ID       string
+	RegionID string
+	NameRU   string
+	NameKZ   string
+}
+
+// District is either an administrative (oblast-level) district, with
+// RegionID set, or an urban (city-level) district, with CityID set —
+// never both; see migration 00014's districts_check constraint.
+type District struct {
+	ID       string
+	Kind     string // administrative | urban
+	RegionID *string
+	CityID   *string
+	NameRU   string
+	NameKZ   string
 }

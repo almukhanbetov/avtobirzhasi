@@ -9,15 +9,18 @@ import (
 // buyerRequestResponse mirrors frontend/types/dashboard.ts's BuyerRequest
 // type field-for-field.
 type buyerRequestResponse struct {
-	ID           string `json:"id"`
-	Make         string `json:"make"`
-	Model        string `json:"model"`
-	YearFrom     int    `json:"yearFrom"`
-	YearTo       int    `json:"yearTo"`
-	Region       string `json:"region"`
-	CurrentOffer int64  `json:"currentOffer"`
-	Status       string `json:"status"`
-	UpdatedAt    string `json:"updatedAt"`
+	ID           string  `json:"id"`
+	Make         string  `json:"make"`
+	Model        string  `json:"model"`
+	YearFrom     int     `json:"yearFrom"`
+	YearTo       int     `json:"yearTo"`
+	Region       string  `json:"region"`
+	RegionID     *string `json:"regionId,omitempty"`
+	CityID       *string `json:"cityId,omitempty"`
+	DistrictID   *string `json:"districtId,omitempty"`
+	CurrentOffer int64   `json:"currentOffer"`
+	Status       string  `json:"status"`
+	UpdatedAt    string  `json:"updatedAt"`
 }
 
 func toBuyerRequestResponse(b models.BuyerRequest) buyerRequestResponse {
@@ -28,6 +31,9 @@ func toBuyerRequestResponse(b models.BuyerRequest) buyerRequestResponse {
 		YearFrom:     b.YearFrom,
 		YearTo:       b.YearTo,
 		Region:       b.Region,
+		RegionID:     b.RegionID,
+		CityID:       b.CityID,
+		DistrictID:   b.DistrictID,
 		CurrentOffer: b.CurrentOffer,
 		Status:       b.Status,
 		UpdatedAt:    b.UpdatedAt.Format(time.RFC3339),

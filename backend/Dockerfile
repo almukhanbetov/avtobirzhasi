@@ -12,6 +12,12 @@ COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/api ./cmd/api
 
+# Stage 9Б-5: the Kazakhstan region/city/district reference-data importer
+# (backend/cmd/import-locations) — bundled the same way as api, run the
+# same way as goose below: a one-off `docker compose run`, never as part
+# of the container's own ENTRYPOINT, so it never runs on every API start.
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/import-locations ./cmd/import-locations
+
 # goose is a separate CLI (not a go.mod dependency of this module — see
 # how migrations/ is applied locally) but is bundled into the image so
 # migrations can be run against production the same way as in dev,
@@ -25,6 +31,7 @@ RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 
 COPY --from=builder /out/api ./api
+COPY --from=builder /out/import-locations ./import-locations
 COPY --from=builder /go/bin/goose ./goose
 COPY migrations ./migrations
 

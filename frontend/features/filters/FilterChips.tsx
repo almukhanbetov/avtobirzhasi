@@ -23,7 +23,7 @@ export function FilterChips({
   const { lang, t } = useLanguage();
   const chips: { key: string; label: string }[] = [];
 
-  if (filters.region) chips.push({ key: "region", label: filters.region });
+  if (filters.region) chips.push({ key: "region", label: filters.region }); // clears location, see below
   if (filters.make) chips.push({ key: "make", label: filters.make });
   if (filters.model) chips.push({ key: "model", label: filters.model });
   if (filters.yearFrom)
@@ -84,6 +84,12 @@ export function FilterChips({
           key={chip.key}
           href={buildHref("/cars", searchParams, {
             [chip.key]: undefined,
+            // The location chip covers region/city/district together —
+            // removing it must clear all four URL keys at once, or a
+            // stale regionId/cityId/districtId would linger behind.
+            ...(chip.key === "region"
+              ? { regionId: undefined, cityId: undefined, districtId: undefined }
+              : {}),
             page: undefined,
           })}
           className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-[13px] font-medium text-foreground transition-colors hover:border-foreground/30"

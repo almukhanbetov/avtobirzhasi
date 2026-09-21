@@ -24,6 +24,9 @@ export interface Car {
   price: number;
   mileageKm: number;
   region: string;
+  regionId?: string;
+  cityId?: string;
+  districtId?: string;
   transmission: Transmission;
   fuelType: FuelType;
   bodyType: BodyType;

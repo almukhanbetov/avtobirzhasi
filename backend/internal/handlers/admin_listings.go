@@ -16,13 +16,14 @@ import (
 // listing). Mounted behind middleware.Auth() + middleware.AdminOnly()
 // under /api/admin.
 type AdminListingsHandler struct {
-	listings *repository.ListingRepository
-	users    *repository.UserRepository
+	listings  *repository.ListingRepository
+	users     *repository.UserRepository
+	locations *repository.LocationRepository
 }
 
 // NewAdminListingsHandler creates an AdminListingsHandler.
-func NewAdminListingsHandler(listings *repository.ListingRepository, users *repository.UserRepository) *AdminListingsHandler {
-	return &AdminListingsHandler{listings: listings, users: users}
+func NewAdminListingsHandler(listings *repository.ListingRepository, users *repository.UserRepository, locations *repository.LocationRepository) *AdminListingsHandler {
+	return &AdminListingsHandler{listings: listings, users: users, locations: locations}
 }
 
 // RegisterAdminListingsRoutes wires the routes. Callers must mount this
@@ -134,6 +135,16 @@ func (h *AdminListingsHandler) Update(c *gin.Context) {
 	if req.Price != nil && listing.IsExchange {
 		respondError(c, http.StatusConflict, "EXCHANGE_MANAGED_FIELD", "Цена управляется автообменом и не может быть изменена вручную")
 		return
+	}
+
+	if !validLocation(c, h.locations, req.RegionID, req.CityID, req.DistrictID) {
+		return
+	}
+	if derived, ok, err := resolveLocationText(c.Request.Context(), h.locations, req.RegionID, req.CityID); err != nil {
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось обновить объявление")
+		return
+	} else if ok {
+		req.Region = &derived
 	}
 
 	fields, priceEdit := buildListingFieldUpdate(listing, req)
