@@ -55,11 +55,11 @@ export function VehiclePriceSidebar({
   }
 
   // Stage 9Б-15: this branch (a non-exchange, "classified"/"Обычная
-  // продажа" listing) no longer offers an ungated phone reveal here —
+  // продажа" listing) no longer offers a direct-to-seller phone reveal —
   // that bypassed the deposit/Match contact-opening mechanism entirely.
-  // Existing classified listings stay visible (their data is untouched),
-  // just without this shortcut; new listings can no longer be created
-  // this way at all (see ListingForm.tsx).
+  // The admin contact link itself now lives only in SellerCard.tsx
+  // (shown once per page, for every listing, exchange or not) — this
+  // sidebar stays scoped to price, matching the exchange branch above.
   return (
     <div className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-6">
       <div className="flex flex-col gap-1">

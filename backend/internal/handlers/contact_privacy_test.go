@@ -15,13 +15,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Stage 9Б-17: regression coverage for the seller-contact-privacy fix.
-// GET /api/sellers/:id (public, no auth) must never include phone, for
-// anyone, under any circumstance — checked at the raw-JSON level, not
-// just against a Go struct, since a struct field with the right zero
-// value would still pass a naive equality check. GET /api/matches/:id
-// must keep including the counterpart's phone, but only for a party to
-// the match, and only once status is "confirmed".
+// Stage 9Б-17/9Б-АДМИН-КОНТАКТ: regression coverage for seller-contact
+// privacy. GET /api/sellers/:id (public, no auth) must never include
+// phone, for anyone, under any circumstance — checked at the raw-JSON
+// level, not just against a Go struct, since a struct field with the
+// right zero value would still pass a naive equality check.
+// GET /api/matches/:id must never include a real phone number for
+// either party, at any status, including "confirmed" — since the
+// single-admin-contact stage, the frontend derives whether to show the
+// admin's number purely from `status`, never from a phone field this
+// endpoint returns.
 
 func newContactPrivacyTestServer(pool *pgxpool.Pool) *httptest.Server {
 	gin.SetMode(gin.TestMode)
@@ -192,27 +195,38 @@ func TestMatchesGet_PartyBeforeBothDepositsGetsNoContact(t *testing.T) {
 	}
 }
 
-func TestMatchesGet_ConfirmedMatchRevealsCounterpartPhoneToEachParty(t *testing.T) {
+// Even once a match is fully confirmed, GET /api/matches/:id must not
+// hand either party the other's real phone number — contact now goes
+// through the single admin number the frontend renders on its own,
+// driven only by `status == "confirmed"`. This is the same field this
+// suite already proves absent pre-confirmation (see
+// TestMatchesGet_PartyBeforeBothDepositsGetsNoContact) — this test
+// proves it stays absent afterward too, not just delayed.
+func TestMatchesGet_ConfirmedMatchNeverIncludesRealPhone(t *testing.T) {
 	pool := testutil.SetupDB(t)
 	server := newContactPrivacyTestServer(pool)
 	defer server.Close()
 
 	matchID, _, sellerToken, _, buyerToken := setupMatch(t, pool, "confirmed", "4")
 
-	// Seller's view: sees the buyer's phone.
 	status, body := doGet(t, server.URL+"/api/matches/"+matchID, sellerToken)
 	if status != http.StatusOK {
 		t.Fatalf("seller: status = %d, want 200", status)
+	}
+	if body["status"] != "confirmed" {
+		t.Fatalf("seller: match status = %v, want \"confirmed\" (test setup is wrong, not the assertion below)", body["status"])
 	}
 	counterpart, ok := body["counterpart"].(map[string]any)
 	if !ok {
 		t.Fatalf("seller: expected a counterpart object, got: %+v", body)
 	}
-	if _, present := counterpart["phone"]; !present {
-		t.Errorf("seller: expected counterpart.phone once confirmed, got: %+v", counterpart)
+	if _, present := counterpart["phone"]; present {
+		t.Errorf("seller: counterpart.phone must never be returned, even confirmed — got: %+v", counterpart)
+	}
+	if counterpart["name"] == nil || counterpart["name"] == "" {
+		t.Errorf("seller: counterpart.name should still be present, got: %+v", counterpart)
 	}
 
-	// Buyer's view: sees the seller's phone.
 	status, body = doGet(t, server.URL+"/api/matches/"+matchID, buyerToken)
 	if status != http.StatusOK {
 		t.Fatalf("buyer: status = %d, want 200", status)
@@ -221,7 +235,7 @@ func TestMatchesGet_ConfirmedMatchRevealsCounterpartPhoneToEachParty(t *testing.
 	if !ok {
 		t.Fatalf("buyer: expected a counterpart object, got: %+v", body)
 	}
-	if _, present := counterpart["phone"]; !present {
-		t.Errorf("buyer: expected counterpart.phone once confirmed, got: %+v", counterpart)
+	if _, present := counterpart["phone"]; present {
+		t.Errorf("buyer: counterpart.phone must never be returned, even confirmed — got: %+v", counterpart)
 	}
 }

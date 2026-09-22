@@ -82,7 +82,7 @@ describe("BuyingWays — Halyk QR deposit area (same on homepage and /buy)", () 
   it("shows the QR caption and a clickable tel: phone", () => {
     renderWays();
     expect(screen.getByText("Внесите 1% от текущей цены по QR")).toBeTruthy();
-    const link = screen.getByRole("link", { name: /702 789 71 20/ });
+    const link = screen.getByRole("link", { name: /702 789 7120/ });
     expect(link.getAttribute("href")).toBe("tel:+77027897120");
   });
 

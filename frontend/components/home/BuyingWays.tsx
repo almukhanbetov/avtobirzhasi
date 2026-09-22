@@ -4,12 +4,8 @@ import { ArrowRight, GitMerge, Phone, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { Container } from "@/components/ui/Container";
 import { SectionHeader } from "@/components/ui/SectionHeader";
+import { ADMIN_CONTACT } from "@/lib/contact/adminContact";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
-
-// Deposit phone for the direct "buy now at the current price" flow.
-// Digits-only for the tel: href; the spaced form is display-only.
-const DEPOSIT_PHONE = "+77027897120";
-const DEPOSIT_PHONE_DISPLAY = "+7 702 789 71 20";
 
 // The left ("Купить сейчас по текущей цене") card always carries the
 // Halyk QR payment area — identical on the homepage and on /buy, which
@@ -105,11 +101,11 @@ export function BuyingWays() {
                       {t("buy.qr.text")}
                     </span>
                     <a
-                      href={`tel:${DEPOSIT_PHONE}`}
+                      href={`tel:${ADMIN_CONTACT.telPhone}`}
                       className="inline-flex items-center gap-2 self-center text-[17px] font-semibold text-brand hover:text-brand-dark sm:self-start"
                     >
                       <Phone size={16} strokeWidth={2} />
-                      {DEPOSIT_PHONE_DISPLAY}
+                      {ADMIN_CONTACT.displayPhone}
                     </a>
                   </div>
                 </div>

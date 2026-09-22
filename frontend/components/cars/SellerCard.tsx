@@ -3,6 +3,7 @@
 import { Star } from "lucide-react";
 import type { Seller } from "@/types/seller";
 import { Badge } from "@/components/ui/Badge";
+import { AdminContactLink } from "@/components/contact/AdminContactLink";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 function initials(name: string): string {
@@ -53,6 +54,14 @@ export function SellerCard({ seller }: { seller: Seller }) {
           </span>
         </div>
       </div>
+
+      {/* Единый номер администратора: shown for every listing here,
+          exchange or not — this is the one universal "how to reach us
+          about this listing" spot on the car detail page. Never the
+          seller's own number (Seller has no .phone field at all — see
+          types/seller.ts and backend/internal/handlers/seller_response.go's
+          doc comment for why GET /api/sellers/:id never returns one). */}
+      <AdminContactLink />
     </div>
   );
 }
