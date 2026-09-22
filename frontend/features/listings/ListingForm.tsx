@@ -97,7 +97,12 @@ export function ListingForm({
             steeringWheel: "left",
             mileageKm: 0,
             images: [],
-            saleMode: "classified",
+            // Stage 9Б-15: "Обычная продажа" removed as a choice for new
+            // listings — every new listing goes through Автобиржа/Match.
+            // The radio toggle below only still renders for isEdit, so an
+            // existing classified listing keeps showing (and submitting)
+            // its real saleMode, never silently flipped to exchange.
+            saleMode: "exchange",
           },
   });
 
@@ -416,59 +421,64 @@ export function ListingForm({
         <div className="flex flex-col gap-5">
           <h2 className="text-[17px] font-semibold text-foreground">{t("listingForm.stepPricePhotos")}</h2>
 
-          <div className="flex flex-col gap-2">
-            <span className="text-[13px] font-medium text-muted-foreground">
-              {t("listingForm.saleMode")}
-            </span>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label
-                className={cn(
-                  "rounded-xl border p-4 transition-colors",
-                  isEdit ? "cursor-default opacity-70" : "cursor-pointer",
-                  saleMode === "classified"
-                    ? "border-brand bg-brand-light"
-                    : "border-border bg-surface hover:border-foreground/30",
-                )}
-              >
-                <input
-                  type="radio"
-                  value="classified"
-                  className="sr-only"
-                  disabled={isEdit}
-                  {...register("saleMode")}
-                />
-                <span className="block text-[15px] font-semibold text-foreground">
-                  {t("listingForm.classifiedTitle")}
-                </span>
-                <span className="block text-[13px] text-muted-foreground">
-                  {t("listingForm.classifiedDescription")}
-                </span>
-              </label>
-              <label
-                className={cn(
-                  "rounded-xl border p-4 transition-colors",
-                  isEdit ? "cursor-default opacity-70" : "cursor-pointer",
-                  saleMode === "exchange"
-                    ? "border-brand bg-brand-light"
-                    : "border-border bg-surface hover:border-foreground/30",
-                )}
-              >
-                <input
-                  type="radio"
-                  value="exchange"
-                  className="sr-only"
-                  disabled={isEdit}
-                  {...register("saleMode")}
-                />
-                <span className="block text-[15px] font-semibold text-foreground">
-                  {t("home.exchange.eyebrow")}
-                </span>
-                <span className="block text-[13px] text-muted-foreground">
-                  {t("listingForm.exchangeDescription")}
-                </span>
-              </label>
+          {isEdit ? (
+            // Stage 9Б-15: "Обычная продажа" ("classified") is no longer
+            // offered to new listings — this toggle only still renders
+            // when editing an existing listing, purely as a read-only
+            // (already-disabled) label of that listing's real, unchanged
+            // saleMode. Never shown, and never a live choice, at creation.
+            <div className="flex flex-col gap-2">
+              <span className="text-[13px] font-medium text-muted-foreground">
+                {t("listingForm.saleMode")}
+              </span>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <label
+                  className={cn(
+                    "cursor-default rounded-xl border p-4 opacity-70 transition-colors",
+                    saleMode === "classified"
+                      ? "border-brand bg-brand-light"
+                      : "border-border bg-surface",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    value="classified"
+                    className="sr-only"
+                    disabled
+                    {...register("saleMode")}
+                  />
+                  <span className="block text-[15px] font-semibold text-foreground">
+                    {t("listingForm.classifiedTitle")}
+                  </span>
+                  <span className="block text-[13px] text-muted-foreground">
+                    {t("listingForm.classifiedDescription")}
+                  </span>
+                </label>
+                <label
+                  className={cn(
+                    "cursor-default rounded-xl border p-4 opacity-70 transition-colors",
+                    saleMode === "exchange"
+                      ? "border-brand bg-brand-light"
+                      : "border-border bg-surface",
+                  )}
+                >
+                  <input
+                    type="radio"
+                    value="exchange"
+                    className="sr-only"
+                    disabled
+                    {...register("saleMode")}
+                  />
+                  <span className="block text-[15px] font-semibold text-foreground">
+                    {t("home.exchange.eyebrow")}
+                  </span>
+                  <span className="block text-[13px] text-muted-foreground">
+                    {t("listingForm.exchangeDescription")}
+                  </span>
+                </label>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <Input
             label={t("listingForm.price")}

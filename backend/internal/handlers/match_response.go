@@ -20,12 +20,18 @@ type matchResponse struct {
 	Role              string      `json:"role"`
 }
 
-// counterpartResponse is the other party to a Match. Phone is only set once
-// the caller-side handler has re-checked status == "confirmed" — see
-// MatchesHandler.Get. It must never be populated any earlier than that.
+// counterpartResponse is the other party to a Match.
+//
+// No phone here, deliberately: once both deposits are confirmed, contact
+// happens through the single admin number (frontend's ADMIN_CONTACT,
+// lib/contact/adminContact.ts) instead of the counterpart's real number —
+// the real number stays in PostgreSQL for internal business use only and
+// is never handed to the other party. See MatchesHandler.Get's doc
+// comment for the (unchanged) confirmed-status gate this struct sits
+// behind — that gate is what decides whether the UI shows the admin
+// contact at all, even though the number itself no longer varies.
 type counterpartResponse struct {
-	Name  string  `json:"name"`
-	Phone *string `json:"phone,omitempty"`
+	Name string `json:"name"`
 }
 
 // matchDetailResponse is the payload for GET /api/matches/:id — everything

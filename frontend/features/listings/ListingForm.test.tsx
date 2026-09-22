@@ -237,6 +237,33 @@ describe("ListingForm create — make/model cascade (Stage 8Б-5)", () => {
   });
 });
 
+describe("ListingForm — Stage 9Б-15: 'Обычная продажа' removed from create", () => {
+  it("the sale-mode toggle is not rendered at all when creating a listing", () => {
+    renderCreate();
+
+    expect(screen.queryByText("Обычная продажа")).toBeNull();
+    expect(screen.queryByText("Способ продажи")).toBeNull();
+  });
+
+  it("a new listing is always created as an exchange listing", async () => {
+    renderCreate();
+    await fillStep1();
+    fireEvent.click(screen.getByRole("button", { name: /далее/i }));
+    await screen.findByText("Коробка");
+    fillStep2();
+    fireEvent.click(screen.getByRole("button", { name: /далее/i }));
+    await screen.findByLabelText("Цена, ₸");
+    await fillStep3AndSubmit();
+
+    await waitFor(() =>
+      expect(createListing).toHaveBeenCalledWith(
+        "user-token",
+        expect.objectContaining({ isExchange: true }),
+      ),
+    );
+  });
+});
+
 describe("ListingForm edit — LocationSelector integration (Stage 5В)", () => {
   function fakeListing(overrides: Partial<SellerListing["car"]> = {}): SellerListing {
     return {
@@ -293,6 +320,16 @@ describe("ListingForm edit — LocationSelector integration (Stage 5В)", () => 
 
     await waitFor(() => expect((screen.getByLabelText("Модель") as HTMLSelectElement).value).toBe("Corona"));
     expect(screen.getByRole("option", { name: "Corona" })).toBeTruthy();
+  });
+
+  it("Stage 9Б-15: an existing classified ('Обычная продажа') listing still shows its real, disabled sale mode", async () => {
+    renderEdit({ isExchange: false });
+
+    const classifiedRadio = screen.getByRole("radio", { name: /обычная продажа/i }) as HTMLInputElement;
+    expect(classifiedRadio.checked).toBe(true);
+    expect(classifiedRadio.disabled).toBe(true);
+    const exchangeRadio = screen.getByRole("radio", { name: /автобиржа/i }) as HTMLInputElement;
+    expect(exchangeRadio.disabled).toBe(true);
   });
 
   it("Almaty (republican_city) in edit mode: no repeated city picker, and saving sends the updated ids", async () => {

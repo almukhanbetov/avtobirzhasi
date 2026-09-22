@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
+import { AdminContactLink } from "@/components/contact/AdminContactLink";
 import { formatTenge } from "@/lib/format/money";
 import { formatDateTime } from "@/lib/format/date";
 import { matchStatusLabels } from "@/lib/labels/dashboard";
@@ -97,12 +98,18 @@ export function MatchCard({ match }: { match: MatchDeal }) {
         {needsMyDeposit ? (
           <Button href="/dashboard/deposits">{t("match.payDeposit")}</Button>
         ) : match.status === "confirmed" ? (
-          <Link
-            href={`/cars/${match.car.id}`}
-            className="text-[14px] font-semibold text-brand hover:text-brand-dark"
-          >
-            {t("match.contactsOpen")}
-          </Link>
+          // Единый номер администратора: both deposits confirmed unlocks
+          // this contact affordance, but it always dials the admin
+          // number, never the counterpart's real phone — see
+          // AdminContactLink's doc comment. Status is read straight off
+          // this already-loaded match; nothing new is fetched to decide
+          // whether to show it.
+          <div className="flex flex-col items-end gap-1">
+            <span className="text-[13px] font-semibold text-success">
+              {t("match.contactsOpen")}
+            </span>
+            <AdminContactLink variant="compact" />
+          </div>
         ) : (
           <Link
             href="/cars"

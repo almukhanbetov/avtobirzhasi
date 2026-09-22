@@ -54,10 +54,12 @@ func (h *MatchesHandler) ListMine(c *gin.Context) {
 	c.JSON(http.StatusOK, out)
 }
 
-// Get handles GET /api/matches/:id (party to the match only). The
-// counterpart's phone number is only ever included once status has been
-// re-checked here, server-side, to be "confirmed" — never trust a
-// frontend-cached status for this. See SKILL.md's Contact unlock rule.
+// Get handles GET /api/matches/:id (party to the match only). No real
+// phone number is ever returned here for either party — once both
+// deposits are confirmed, contact goes through the single admin number
+// (frontend's ADMIN_CONTACT), not a direct line to the counterpart. The
+// frontend decides whether to show that admin contact purely from this
+// response's own `status` field, so there is nothing left here to gate.
 func (h *MatchesHandler) Get(c *gin.Context) {
 	userID, _ := middleware.UserID(c)
 	id, ok := requireUUIDParam(c, "id")
@@ -98,10 +100,6 @@ func (h *MatchesHandler) Get(c *gin.Context) {
 	resp := matchDetailResponse{
 		matchResponse: toMatchResponse(m, toCarResponse(*listing), roleFor(m, userID)),
 		Counterpart:   counterpartResponse{Name: counterpart.Name},
-	}
-	if m.Status == "confirmed" {
-		phone := counterpart.Phone
-		resp.Counterpart.Phone = &phone
 	}
 
 	c.JSON(http.StatusOK, resp)

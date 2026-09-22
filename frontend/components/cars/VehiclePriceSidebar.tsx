@@ -1,13 +1,12 @@
 "use client";
 
-import { Lock, ShieldCheck } from "lucide-react";
+import { Lock } from "lucide-react";
 import type { Car } from "@/types/car";
 import type { Seller } from "@/types/seller";
 import { formatTenge } from "@/lib/format/money";
 import { Button } from "@/components/ui/Button";
 import { MatchIndicator } from "@/components/exchange/MatchIndicator";
 import { PriceMovement } from "@/components/exchange/PriceMovement";
-import { PhoneReveal } from "@/components/cars/PhoneReveal";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 export function VehiclePriceSidebar({
@@ -55,6 +54,12 @@ export function VehiclePriceSidebar({
     );
   }
 
+  // Stage 9Б-15: this branch (a non-exchange, "classified"/"Обычная
+  // продажа" listing) no longer offers a direct-to-seller phone reveal —
+  // that bypassed the deposit/Match contact-opening mechanism entirely.
+  // The admin contact link itself now lives only in SellerCard.tsx
+  // (shown once per page, for every listing, exchange or not) — this
+  // sidebar stays scoped to price, matching the exchange branch above.
   return (
     <div className="flex flex-col gap-5 rounded-2xl border border-border bg-surface p-6">
       <div className="flex flex-col gap-1">
@@ -64,14 +69,7 @@ export function VehiclePriceSidebar({
         </span>
       </div>
 
-      <PhoneReveal phone={seller.phone} />
-
-      <div className="flex items-center gap-2 border-t border-border pt-4 text-[13px] text-muted-foreground">
-        <ShieldCheck size={16} className="shrink-0 text-success" />
-        {t("price.directDeal")}
-      </div>
-
-      <div className="text-[13px] text-muted-foreground">
+      <div className="border-t border-border pt-4 text-[13px] text-muted-foreground">
         {seller.name} ·{" "}
         {seller.type === "dealer" ? t("seller.dealer") : t("seller.private")}
       </div>
