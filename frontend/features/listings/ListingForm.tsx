@@ -291,6 +291,9 @@ export function ListingForm({
             error={errors.model?.message}
             disabled={!make}
             {...register("model")}
+            onChange={(e) => {
+              setValue("model", e.target.value, { shouldValidate: true });
+            }}
           >
             <option value="">{t("listingForm.chooseModel")}</option>
             {modelOptions.map((model) => (
