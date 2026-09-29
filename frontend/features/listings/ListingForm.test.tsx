@@ -237,6 +237,115 @@ describe("ListingForm create — make/model cascade (Stage 8Б-5)", () => {
   });
 });
 
+// Production bug: selecting a valid model (e.g. Audi → A8) left the select
+// showing "A8" while its own validation error ("Выберите модель") and red
+// border stayed visible — the displayed value and the validated value had
+// diverged. Root cause: the model <Select> relied only on the implicit
+// onChange react-hook-form's own `register("model")` attaches to its
+// uncontrolled ref. That's normally enough — but once step 1's fields have
+// already been batch-validated once (e.g. clicking "Далее" with the step
+// still empty, which calls `trigger()` over every step-1 field at once,
+// including "model"), a later native DOM change on that same field no
+// longer reliably re-triggers Zod revalidation for it, so `errors.model`
+// is left stale even though the underlying value is correct. The make
+// <Select> already avoided this exact trap with its own explicit
+// `setValue(..., { shouldValidate: true })` call in onChange (used to
+// reset+revalidate "model" on every make change) — the fix mirrors that
+// same, already-established pattern onto the model <Select> itself,
+// instead of relying on the implicit path.
+describe("ListingForm create — model validation clears on selection (regression)", () => {
+  function makeSelectEl() {
+    return screen.getByLabelText("Марка") as HTMLSelectElement;
+  }
+  function modelSelectEl() {
+    return screen.getByLabelText("Модель") as HTMLSelectElement;
+  }
+  function modelErrorText() {
+    return screen.queryByText("Выберите модель", { selector: "span" });
+  }
+
+  it("1: model starts empty with no error shown", () => {
+    renderCreate();
+    expect(modelSelectEl().value).toBe("");
+    expect(modelErrorText()).toBeNull();
+  });
+
+  it("2-7: exact production bug — Далее with nothing filled, then Audi → A8 must clear the error immediately", async () => {
+    renderCreate();
+
+    // Reproduces the real trigger: attempting to advance with the step
+    // empty runs trigger() over every step-1 field at once, including
+    // "model" — this is what left errors.model stale in production.
+    fireEvent.click(screen.getByRole("button", { name: /далее/i }));
+
+    fireEvent.change(makeSelectEl(), { target: { value: "Audi" } });
+    // Selecting a make alone must not satisfy model — it starts back at
+    // "" and stays invalid until an actual model is chosen.
+    expect(modelSelectEl().value).toBe("");
+
+    fireEvent.change(modelSelectEl(), { target: { value: "A8" } });
+
+    // 4: A8 is visible in the model select.
+    expect(screen.getByRole("option", { name: "A8" })).toBeTruthy();
+    // 5: form state contains the expected non-empty model value.
+    expect(modelSelectEl().value).toBe("A8");
+    // 6-7: the error and the select's own invalid state must clear —
+    // Zod/react-hook-form validation is asynchronous, so this must be
+    // awaited: asserting synchronously right after fireEvent would pass
+    // even on the broken code, by accident, before validation settles.
+    await waitFor(() => expect(modelSelectEl().getAttribute("aria-invalid")).toBe("false"));
+    expect(modelErrorText()).toBeNull();
+  });
+
+  it("8: submit payload includes the selected model", async () => {
+    renderCreate();
+    fireEvent.click(screen.getByRole("button", { name: /далее/i }));
+
+    fireEvent.change(makeSelectEl(), { target: { value: "Audi" } });
+    fireEvent.change(modelSelectEl(), { target: { value: "A8" } });
+    fireEvent.change(screen.getByLabelText("Год выпуска"), { target: { value: "2020" } });
+    fireEvent.change(screen.getByLabelText("Пробег, км"), { target: { value: "45000" } });
+    await screen.findByRole("option", { name: "Алматинская область" });
+    fireEvent.change(screen.getByLabelText("Регион"), { target: { value: "r-almaty-obl" } });
+
+    fireEvent.click(screen.getByRole("button", { name: /далее/i }));
+    await screen.findByText("Коробка");
+    fillStep2();
+    fireEvent.click(screen.getByRole("button", { name: /далее/i }));
+    await screen.findByLabelText("Цена, ₸");
+    await fillStep3AndSubmit();
+
+    await waitFor(() =>
+      expect(createListing).toHaveBeenCalledWith(
+        "user-token",
+        expect.objectContaining({ make: "Audi", model: "A8" }),
+      ),
+    );
+  });
+
+  it("9-11: switching Audi → Toyota clears A8, and a fresh Toyota model selection clears the error again", async () => {
+    renderCreate();
+    fireEvent.click(screen.getByRole("button", { name: /далее/i }));
+
+    fireEvent.change(makeSelectEl(), { target: { value: "Audi" } });
+    fireEvent.change(modelSelectEl(), { target: { value: "A8" } });
+    expect(modelSelectEl().value).toBe("A8");
+
+    // 9-10: switching make clears the previous model value — A8 must not
+    // survive as a (now make-mismatched) leftover value or option.
+    fireEvent.change(makeSelectEl(), { target: { value: "Toyota" } });
+    expect(modelSelectEl().value).toBe("");
+    expect(screen.queryByRole("option", { name: "A8" })).toBeNull();
+
+    // 11: picking a real Toyota model clears the error the make-switch
+    // itself re-armed, exactly like the Audi/A8 case above.
+    fireEvent.change(modelSelectEl(), { target: { value: "Camry" } });
+    expect(modelSelectEl().value).toBe("Camry");
+    await waitFor(() => expect(modelSelectEl().getAttribute("aria-invalid")).toBe("false"));
+    expect(modelErrorText()).toBeNull();
+  });
+});
+
 describe("ListingForm edit — LocationSelector integration (Stage 5В)", () => {
   function fakeListing(overrides: Partial<SellerListing["car"]> = {}): SellerListing {
     return {
