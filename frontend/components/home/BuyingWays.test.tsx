@@ -26,9 +26,9 @@ describe("BuyingWays — left 'buy now at current price' card", () => {
   it("lists the four direct-purchase points", () => {
     renderWays();
     expect(screen.getByText("Покупка автомобиля по текущей цене")).toBeTruthy();
-    expect(screen.getByText("Депозит — 1% от стоимости автомобиля")).toBeTruthy();
+    expect(screen.getByText("Комиссия — 0,1% от стоимости автомобиля")).toBeTruthy();
     expect(
-      screen.getByText("После подтверждения депозита открывается контакт продавца"),
+      screen.getByText("После подтверждения оплаты комиссии открывается контакт продавца"),
     ).toBeTruthy();
     expect(screen.getByText("Сделку можно начать сразу")).toBeTruthy();
   });
@@ -45,7 +45,7 @@ describe("BuyingWays — left 'buy now at current price' card", () => {
   });
 });
 
-describe("BuyingWays — Halyk QR deposit area (same on homepage and /buy)", () => {
+describe("BuyingWays — Halyk QR commission area (same on homepage and /buy)", () => {
   it("renders exactly one plain <img> QR, inside the LEFT card only", () => {
     const { container } = renderWays();
     const imgs = container.querySelectorAll('img[src="/images/halyk-qr.jpg"]');
@@ -81,7 +81,7 @@ describe("BuyingWays — Halyk QR deposit area (same on homepage and /buy)", () 
 
   it("shows the QR caption and a clickable tel: phone", () => {
     renderWays();
-    expect(screen.getByText("Внесите 1% от текущей цены по QR")).toBeTruthy();
+    expect(screen.getByText("Оплатите комиссию 0,1% от текущей цены по QR")).toBeTruthy();
     const link = screen.getByRole("link", { name: /702 789 7120/ });
     expect(link.getAttribute("href")).toBe("tel:+77027897120");
   });
@@ -90,7 +90,7 @@ describe("BuyingWays — Halyk QR deposit area (same on homepage and /buy)", () 
     localStorage.setItem("avtobirzhasi_lang", "kz");
     renderWays();
     await waitFor(() =>
-      expect(screen.getByText("QR арқылы ағымдағы бағаның 1%-ын төлеңіз")).toBeTruthy(),
+      expect(screen.getByText("QR арқылы ағымдағы бағаның 0,1% комиссиясын төлеңіз")).toBeTruthy(),
     );
     expect(screen.queryByText("buy.qr.text")).toBeNull();
   });

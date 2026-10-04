@@ -120,12 +120,12 @@ func TestExchangeService_GenuineMatchIsCreated(t *testing.T) {
 	// the match's final_price is the listing's post-decay price (8,000,000
 	// * 0.99), not its price when the test seeded it.
 	const wantFinalPrice = 7_920_000
-	const wantDepositAmount = 79_200
+	const wantDepositAmount = 7_920 // 0.1% commission
 	if finalPrice != wantFinalPrice {
 		t.Errorf("final_price = %d, want the listing's post-decay price at match time (%d)", finalPrice, wantFinalPrice)
 	}
 	if depositAmount != wantDepositAmount {
-		t.Errorf("deposit_amount = %d, want round(finalPrice * 0.01) = %d", depositAmount, wantDepositAmount)
+		t.Errorf("deposit_amount = %d, want round(finalPrice * 0.001) = %d", depositAmount, wantDepositAmount)
 	}
 	if matchStatus != "awaiting_deposit" {
 		t.Errorf("match status = %q, want awaiting_deposit", matchStatus)

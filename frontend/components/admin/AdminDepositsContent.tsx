@@ -16,7 +16,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { useLanguage } from "@/lib/i18n/LanguageProvider";
 import type { DepositStatus } from "@/types/dashboard";
 
-const STATUSES: DepositStatus[] = ["pending", "paid", "refunded"];
+const STATUSES: DepositStatus[] = ["pending", "paid", "refunded", "amount_mismatch"];
 
 export function AdminDepositsContent() {
   const { t, lang } = useLanguage();

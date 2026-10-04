@@ -37,7 +37,7 @@ describe("HowItWorksPage", () => {
 
   it("renders all four step cards, once each", () => {
     renderPage();
-    for (const title of ["Цены сближаются", "Match и заморозка", "Депозит 1%", "Контакты открыты"]) {
+    for (const title of ["Цены сближаются", "Match и заморозка", "Комиссия 0,1%", "Контакты открыты"]) {
       expect(screen.getAllByText(title)).toHaveLength(1);
     }
   });

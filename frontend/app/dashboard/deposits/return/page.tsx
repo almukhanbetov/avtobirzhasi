@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { DepositReturnContent } from "@/components/dashboard/DepositReturnContent";
 
 export const metadata: Metadata = {
-  title: "Оплата депозита — AVTOBIRZHASI.KZ",
+  title: "Оплата комиссии — AVTOBIRZHASI.KZ",
 };
 
 export default function DashboardDepositReturnPage() {

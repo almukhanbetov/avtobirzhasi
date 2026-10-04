@@ -151,7 +151,7 @@ func (h *DashboardHandler) Overview(c *gin.Context) {
 		deadline := depositMatch.Deadline.Format(time.RFC3339)
 		tasks = append(tasks, dashboardTask{
 			Type:     "deposit_required",
-			Message:  fmt.Sprintf("Нужно внести депозит — %s %s", depositListing.Make, depositListing.Model),
+			Message:  fmt.Sprintf("Нужно оплатить комиссию — %s %s", depositListing.Make, depositListing.Model),
 			MatchID:  &matchID,
 			Deadline: &deadline,
 		})

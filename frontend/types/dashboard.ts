@@ -10,7 +10,9 @@ export type MatchStatus =
   | "expired"
   | "cancelled";
 
-export type DepositStatus = "pending" | "paid" | "refunded" | "failed";
+// amount_mismatch: the provider reported a payment whose amount differs from
+// the stored commission — never treated as paid, held for manual review.
+export type DepositStatus = "pending" | "paid" | "refunded" | "failed" | "amount_mismatch";
 
 export type NotificationType =
   | "match_found"

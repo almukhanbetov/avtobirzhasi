@@ -72,7 +72,7 @@ func (h *AdminDepositsHandler) List(c *gin.Context) {
 	page := parsePage(c)
 	items, total, err := h.deposits.ListAll(c.Request.Context(), c.Query("status"), page, adminPageSize)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить депозиты")
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить комиссии")
 		return
 	}
 

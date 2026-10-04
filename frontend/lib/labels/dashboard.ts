@@ -28,17 +28,17 @@ export const listingStatusLabels: Record<
 
 export const matchStatusLabels: Record<Lang, Record<MatchStatus, string>> = {
   ru: {
-    awaiting_deposit: "Ожидается депозит",
-    seller_deposit_paid: "Депозит продавца внесён",
-    buyer_deposit_paid: "Депозит покупателя внесён",
+    awaiting_deposit: "Ожидается оплата комиссии",
+    seller_deposit_paid: "Комиссия продавца оплачена",
+    buyer_deposit_paid: "Комиссия покупателя оплачена",
     confirmed: "Сделка подтверждена",
     expired: "Истёк срок",
     cancelled: "Отменено",
   },
   kz: {
-    awaiting_deposit: "Депозит күтілуде",
-    seller_deposit_paid: "Сатушының депозиті төленді",
-    buyer_deposit_paid: "Сатып алушының депозиті төленді",
+    awaiting_deposit: "Комиссия төлемі күтілуде",
+    seller_deposit_paid: "Сатушының комиссиясы төленді",
+    buyer_deposit_paid: "Сатып алушының комиссиясы төленді",
     confirmed: "Мәміле расталды",
     expired: "Мерзімі өтті",
     cancelled: "Болдырылмады",
@@ -51,30 +51,32 @@ export const depositStatusLabels: Record<
 > = {
   ru: {
     pending: { label: "Ожидает оплаты", variant: "warning" },
-    paid: { label: "Оплачен", variant: "success" },
-    refunded: { label: "Возвращён", variant: "neutral" },
+    paid: { label: "Оплачена", variant: "success" },
+    refunded: { label: "Возвращена", variant: "neutral" },
     failed: { label: "Платёж не прошёл", variant: "destructive" },
+    amount_mismatch: { label: "На проверке", variant: "warning" },
   },
   kz: {
     pending: { label: "Төлем күтілуде", variant: "warning" },
     paid: { label: "Төленді", variant: "success" },
     refunded: { label: "Қайтарылды", variant: "neutral" },
     failed: { label: "Төлем өтпеді", variant: "destructive" },
+    amount_mismatch: { label: "Тексерісте", variant: "warning" },
   },
 };
 
 export const notificationLabels: Record<Lang, Record<NotificationType, string>> = {
   ru: {
     match_found: "Match найден",
-    deposit_required: "Нужно внести депозит",
-    deposit_received: "Депозит получен",
+    deposit_required: "Нужно оплатить комиссию",
+    deposit_received: "Комиссия получена",
     contacts_open: "Контакты открыты",
     match_expired: "Срок Match истёк",
   },
   kz: {
     match_found: "Match табылды",
-    deposit_required: "Депозит салу қажет",
-    deposit_received: "Депозит алынды",
+    deposit_required: "Комиссияны төлеу қажет",
+    deposit_received: "Комиссия алынды",
     contacts_open: "Байланыстар ашылды",
     match_expired: "Match мерзімі өтті",
   },

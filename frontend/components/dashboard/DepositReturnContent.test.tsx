@@ -50,4 +50,12 @@ describe("DepositReturnContent", () => {
     renderContent();
     expect(await screen.findByText("Оплата не прошла")).toBeTruthy();
   });
+
+  it("shows a manual-review notice, not success or failure, on an amount mismatch", async () => {
+    vi.mocked(getDepositStatus).mockResolvedValue({ id: "deposit-1", status: "amount_mismatch", matchStatus: "awaiting_deposit" });
+    renderContent();
+    expect(await screen.findByText(/Платёж передан на проверку администратору/)).toBeTruthy();
+    expect(screen.queryByText("Оплата прошла успешно")).toBeNull();
+    expect(screen.queryByText("Оплата не прошла")).toBeNull();
+  });
 });

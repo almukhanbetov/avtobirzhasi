@@ -320,16 +320,16 @@ func TestDepositService_ConfirmWebhook_AmountMismatchRejected(t *testing.T) {
 	err := svc.ConfirmWebhook(ctx, WebhookEvent{
 		ProviderPaymentID: "pp-" + sellerDepositID, Status: PaymentStatusSucceeded, AmountTenge: 1, Currency: "KZT",
 	})
-	if !errors.Is(err, ErrWebhookAmountMismatch) {
-		t.Fatalf("ConfirmWebhook error = %v, want ErrWebhookAmountMismatch", err)
+	if !errors.Is(err, ErrPaymentAmountMismatch) {
+		t.Fatalf("ConfirmWebhook error = %v, want ErrPaymentAmountMismatch", err)
 	}
 
 	var status string
 	if err := pool.QueryRow(ctx, `SELECT status FROM deposits WHERE id = $1`, sellerDepositID).Scan(&status); err != nil {
 		t.Fatalf("reload deposit: %v", err)
 	}
-	if status != "pending" {
-		t.Errorf("deposit status after mismatched webhook = %q, want still pending (rejected, not applied)", status)
+	if status != "amount_mismatch" {
+		t.Errorf("deposit status after mismatched webhook = %q, want amount_mismatch (rejected, not applied)", status)
 	}
 }
 

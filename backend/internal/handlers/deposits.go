@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"avtobirzhasi/backend/internal/middleware"
@@ -45,7 +46,7 @@ func (h *DepositsHandler) ListMine(c *gin.Context) {
 
 	rows, err := h.deposits.ListForUser(c.Request.Context(), userID)
 	if err != nil {
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить депозиты")
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить комиссии")
 		return
 	}
 
@@ -53,12 +54,12 @@ func (h *DepositsHandler) ListMine(c *gin.Context) {
 	for _, d := range rows {
 		m, err := h.matches.GetByID(c.Request.Context(), d.MatchID)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить депозиты")
+			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить комиссии")
 			return
 		}
 		listing, err := h.listings.GetByID(c.Request.Context(), m.ListingID)
 		if err != nil {
-			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить депозиты")
+			respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось загрузить комиссии")
 			return
 		}
 		out = append(out, toDepositResponse(d, *listing))
@@ -86,15 +87,18 @@ func (h *DepositsHandler) Pay(c *gin.Context) {
 	result, err := h.pay.InitiatePay(c.Request.Context(), id, userID)
 	switch {
 	case errors.Is(err, service.ErrDepositNotFound):
-		respondError(c, http.StatusNotFound, "NOT_FOUND", "Депозит не найден")
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "Комиссия не найдена")
 	case errors.Is(err, service.ErrDepositForbidden):
-		respondError(c, http.StatusForbidden, "FORBIDDEN", "Это не ваш депозит")
+		respondError(c, http.StatusForbidden, "FORBIDDEN", "Это не ваша комиссия")
 	case errors.Is(err, service.ErrDepositNotPending):
-		respondError(c, http.StatusConflict, "CONFLICT", "Депозит уже обработан или сделка закрыта")
+		respondError(c, http.StatusConflict, "CONFLICT", "Комиссия уже оплачена или сделка закрыта")
 	case errors.Is(err, service.ErrPaymentFailed):
 		respondError(c, http.StatusBadGateway, "PAYMENT_FAILED", "Платёж не прошёл, попробуйте ещё раз")
+	case errors.Is(err, service.ErrPaymentAmountMismatch):
+		log.Printf("deposit pay: AMOUNT MISMATCH, session not created: %v", err)
+		respondError(c, http.StatusConflict, "PAYMENT_AMOUNT_MISMATCH", "Сумма комиссии не сходится. Обратитесь к администратору.")
 	case err != nil:
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось внести депозит")
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось оплатить комиссию")
 	case result.RedirectURL != "":
 		c.JSON(http.StatusOK, gin.H{"redirectUrl": result.RedirectURL})
 	default:
@@ -120,11 +124,11 @@ func (h *DepositsHandler) Status(c *gin.Context) {
 	result, err := h.pay.CheckStatus(c.Request.Context(), id, userID)
 	switch {
 	case errors.Is(err, service.ErrDepositNotFound):
-		respondError(c, http.StatusNotFound, "NOT_FOUND", "Депозит не найден")
+		respondError(c, http.StatusNotFound, "NOT_FOUND", "Комиссия не найдена")
 	case errors.Is(err, service.ErrDepositForbidden):
-		respondError(c, http.StatusForbidden, "FORBIDDEN", "Это не ваш депозит")
+		respondError(c, http.StatusForbidden, "FORBIDDEN", "Это не ваша комиссия")
 	case err != nil:
-		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось проверить статус депозита")
+		respondError(c, http.StatusInternalServerError, "INTERNAL_ERROR", "Не удалось проверить статус оплаты комиссии")
 	default:
 		c.JSON(http.StatusOK, gin.H{
 			"id":          result.DepositID,
