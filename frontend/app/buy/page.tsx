@@ -5,7 +5,7 @@ import { BuyHowToSteps } from "@/components/buy/BuyHowToSteps";
 export const metadata: Metadata = {
   title: "Купить автомобиль — AVTOBIRZHASI.KZ",
   description:
-    "Два способа купить автомобиль: сразу по текущей цене с депозитом 1% по QR, или через Автобиржу с автоматическим подбором цены.",
+    "Два способа купить автомобиль: сразу по текущей цене с комиссией 0,1% по QR, или через Автобиржу с автоматическим подбором цены.",
 };
 
 // /buy reuses the two-cards section (BuyingWays — also on the homepage;

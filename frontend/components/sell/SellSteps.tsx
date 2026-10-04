@@ -10,7 +10,7 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 // BuyHowToSteps.tsx (not a new design). Wording verified against the
 // actual backend implementation, not invented — see
 // backend/internal/service/exchange.go (dailyRate = 0.01,
-// matchTolerancePercent ≈2%, deposit = 1% of finalPrice) and
+// matchTolerancePercent ≈2%, commission = 0.1% of finalPrice) and
 // MatchesHandler.Get (counterpart phone only once status == "confirmed").
 export function SellSteps() {
   const { t } = useLanguage();

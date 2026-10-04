@@ -62,6 +62,14 @@ func (h *WebhooksHandler) FreedomPay(c *gin.Context) {
 			c.Data(http.StatusOK, "application/xml", []byte(`<response><pg_status>rejected</pg_status></response>`))
 			return
 		}
+		if errors.Is(err, service.ErrPaymentAmountMismatch) {
+			// Not applied: deposit moved to 'amount_mismatch' with the reported
+			// amount recorded, match doesn't advance, contacts stay closed —
+			// needs manual review.
+			log.Printf("freedompay webhook: AMOUNT MISMATCH, payment %q not applied: %v", event.ProviderPaymentID, err)
+			c.Data(http.StatusOK, "application/xml", []byte(`<response><pg_status>error</pg_status></response>`))
+			return
+		}
 		log.Printf("freedompay webhook: confirm failed: %v", err)
 		c.Data(http.StatusOK, "application/xml", []byte(`<response><pg_status>error</pg_status></response>`))
 		return

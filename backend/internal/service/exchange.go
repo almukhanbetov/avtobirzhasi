@@ -20,6 +20,13 @@ const (
 	// matchTolerancePercent is the "≈2%" gap that triggers a Match.
 	matchTolerancePercent = 2.0
 
+	// commissionRate is the 0.1% commission each side pays on a Match's
+	// final price — shown to users as «Комиссия 0,1%». It is deliberately
+	// separate from dailyRate (1%): the two must never be conflated. The
+	// result is stored in the legacy-named matches.deposit_amount /
+	// deposits.amount columns and is exactly what FreedomPay is charged.
+	commissionRate = 0.001
+
 	// matchDeadlineWindow is how long a Match waits for both deposits
 	// before it expires.
 	matchDeadlineWindow = 48 * time.Hour
@@ -315,7 +322,7 @@ func (s *ExchangeService) tryCreateMatch(ctx context.Context, pair candidatePair
 	}
 
 	finalPrice := listingPrice
-	depositAmount := int64(math.Round(float64(finalPrice) * 0.01))
+	depositAmount := commissionAmount(finalPrice)
 	deadline := time.Now().Add(matchDeadlineWindow)
 
 	var matchID string
@@ -359,6 +366,14 @@ func (s *ExchangeService) tryCreateMatch(ctx context.Context, pair candidatePair
 		return false, err
 	}
 	return true, nil
+}
+
+// commissionAmount is the whole-tenge commission for a Match at
+// finalPrice: round(finalPrice * commissionRate). It is the single source
+// of the charged amount — stored on the match and both deposit rows, sent
+// to the payment provider as-is, and re-checked against webhooks.
+func commissionAmount(finalPrice int64) int64 {
+	return int64(math.Round(float64(finalPrice) * commissionRate))
 }
 
 type overdueMatch struct {

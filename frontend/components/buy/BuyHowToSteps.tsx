@@ -7,7 +7,7 @@ import { useLanguage } from "@/lib/i18n/LanguageProvider";
 
 // The manual direct-purchase instructions shown on /buy, below the two
 // BuyingWays cards. This is the "buy now at the current price" path: pick
-// a car, pay a 1% deposit by QR, then get the seller's contact. It is a
+// a car, pay a 0.1% commission by QR, then get the seller's contact. It is a
 // plain explainer — no backend, no Auto Exchange mechanics.
 export function BuyHowToSteps() {
   const { t } = useLanguage();

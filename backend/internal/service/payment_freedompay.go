@@ -157,7 +157,7 @@ func (p *FreedomPayProvider) CreatePayment(ctx context.Context, depositID string
 		"pg_order_id":    depositID,
 		"pg_merchant_id": p.cfg.MerchantID,
 		"pg_amount":      tengeToAmount(amountTenge),
-		"pg_description": "Депозит avtobirzhasi.kz",
+		"pg_description": "Комиссия avtobirzhasi.kz",
 		"pg_currency":    "KZT",
 		"pg_salt":        salt,
 	}

@@ -65,13 +65,13 @@ export const translations = {
     "notification.unread": "Непрочитано",
 
     "match.finalPrice": "Финальная цена",
-    "match.yourDeposit": "Ваш депозит",
+    "match.yourDeposit": "Ваша комиссия",
     "match.deadline": "Дедлайн",
-    "match.sellerDeposit": "Депозит продавца:",
-    "match.buyerDeposit": "Депозит покупателя:",
+    "match.sellerDeposit": "Комиссия продавца:",
+    "match.buyerDeposit": "Комиссия покупателя:",
     "match.paid": "внесён",
     "match.pending": "ожидается",
-    "match.payDeposit": "Внести депозит",
+    "match.payDeposit": "Оплатить комиссию",
     "match.contactsOpen": "Контакты открыты →",
     "match.viewSimilar": "Смотреть похожие",
 
@@ -128,7 +128,7 @@ export const translations = {
       "Не нужно вручную искать совпадения — Автобиржа сама сводит цены и участников.",
     "home.whyUs.benefit2.title": "Реальные намерения",
     "home.whyUs.benefit2.description":
-      "Депозит с обеих сторон подтверждает, что сделка серьёзная, а не праздный интерес.",
+      "Комиссия с обеих сторон подтверждает, что сделка серьёзная, а не праздный интерес.",
     "home.whyUs.benefit3.title": "Прозрачное движение цены",
     "home.whyUs.benefit3.description":
       "Вы всегда видите, как меняется цена и на сколько она приблизилась к сделке.",
@@ -140,12 +140,12 @@ export const translations = {
     "home.trust.title":
       "Контакты открываются только двум подтверждённым сторонам",
     "home.trust.description":
-      "Депозит 1% — это не оплата автомобиля, а подтверждение серьёзности намерений. Пока не внесены оба депозита, объявления заморожены, а номера телефонов скрыты.",
+      "Комиссия 0,1% — это не оплата автомобиля, а подтверждение серьёзности намерений. Пока обе стороны не оплатили комиссию, объявления заморожены, а номера телефонов скрыты.",
     "home.trust.note":
       "Это защищает продавцов от случайных звонков и защищает покупателей от продавцов, которые передумали в последний момент.",
     "home.trust.matchCreated": "Match создан, объявления заморожены",
-    "home.trust.checklist1": "Депозит от продавца подтверждён",
-    "home.trust.checklist2": "Депозит от покупателя подтверждён",
+    "home.trust.checklist1": "Комиссия продавца оплачена",
+    "home.trust.checklist2": "Комиссия покупателя оплачена",
     "home.trust.checklist3": "Номера телефонов открыты обеим сторонам",
     "home.trust.contactsOpen":
       "Контакты открыты — можно договариваться о сделке",
@@ -160,12 +160,12 @@ export const translations = {
     "home.exchange.step2.title": "Match и заморозка",
     "home.exchange.step2.description":
       "Когда разница в цене доходит примерно до 2%, система создаёт Match. Оба объявления замораживаются.",
-    "home.exchange.step3.title": "Депозит 1%",
+    "home.exchange.step3.title": "Комиссия 0,1%",
     "home.exchange.step3.description":
-      "Продавец и покупатель вносят депозит в размере 1% от цены сделки — это подтверждает серьёзность намерений.",
+      "Продавец и покупатель оплачивают комиссию 0,1% от цены сделки — это подтверждает серьёзность намерений.",
     "home.exchange.step4.title": "Контакты открыты",
     "home.exchange.step4.description":
-      "После того как оба депозита внесены, стороны получают контакты друг друга и договариваются о сделке.",
+      "После того как обе стороны оплатили комиссию, они получают контакты друг друга и договариваются о сделке.",
 
     "home.buyingWays.eyebrow": "Два пути к сделке",
     "home.buyingWays.title": "Два способа купить автомобиль",
@@ -173,10 +173,10 @@ export const translations = {
       "Выбирайте покупку по текущей цене или доверьте подбор цены Автобирже.",
     "home.buyingWays.way1.title": "Купить сейчас по текущей цене",
     "home.buyingWays.way1.description":
-      "Выберите автомобиль по текущей цене, внесите 1% от стоимости через QR и свяжитесь с нами. После подтверждения депозита мы предоставим контакт продавца.",
+      "Выберите автомобиль по текущей цене, оплатите комиссию 0,1% от стоимости через QR и свяжитесь с нами. После подтверждения оплаты комиссии мы предоставим контакт продавца.",
     "home.buyingWays.way1.point1": "Покупка автомобиля по текущей цене",
-    "home.buyingWays.way1.point2": "Депозит — 1% от стоимости автомобиля",
-    "home.buyingWays.way1.point3": "После подтверждения депозита открывается контакт продавца",
+    "home.buyingWays.way1.point2": "Комиссия — 0,1% от стоимости автомобиля",
+    "home.buyingWays.way1.point3": "После подтверждения оплаты комиссии открывается контакт продавца",
     "home.buyingWays.way1.point4": "Сделку можно начать сразу",
     "home.buyingWays.way1.cta": "Смотреть автомобили",
     "home.buyingWays.way2.title": "Купить через Автобиржу",
@@ -184,24 +184,24 @@ export const translations = {
       "Укажите цену, которую готовы заплатить. Система сама сведёт вас с продавцом, когда цены сойдутся.",
     "home.buyingWays.way2.point1": "Цена продавца снижается, ваша — растёт",
     "home.buyingWays.way2.point2": "Match создаётся автоматически",
-    "home.buyingWays.way2.point3": "Контакты открываются после депозита",
+    "home.buyingWays.way2.point3": "Контакты открываются после оплаты комиссии",
     "home.buyingWays.way2.cta": "Создать заявку на покупку",
 
     "buy.howTo.eyebrow": "Прямая покупка",
     "buy.howTo.title": "Как купить по текущей цене",
     "buy.howTo.subtitle":
-      "Для прямой покупки автомобиля внесите депозит 1% от текущей цены.",
+      "Для прямой покупки автомобиля оплатите комиссию 0,1% от текущей цены.",
     "buy.howTo.step1.title": "Выберите автомобиль",
     "buy.howTo.step1.description":
       "Откройте подходящее объявление и проверьте текущую цену.",
-    "buy.howTo.step2.title": "Внесите 1% от текущей цены по QR",
+    "buy.howTo.step2.title": "Оплатите комиссию 0,1% от текущей цены по QR",
     "buy.howTo.step2.description":
-      "Оплатите 1% от текущей стоимости автомобиля по QR-коду.",
+      "Оплатите комиссию 0,1% от текущей стоимости автомобиля по QR-коду.",
     "buy.howTo.step3.title": "Получите контакт администратора",
     "buy.howTo.step3.description":
       "После подтверждения платежа свяжитесь с администратором Автобиржи по номеру +7 702 789 7120 — он поможет оформить сделку с продавцом.",
-    "buy.qr.text": "Внесите 1% от текущей цены по QR",
-    "buy.qr.imageAlt": "Halyk QR для оплаты депозита",
+    "buy.qr.text": "Оплатите комиссию 0,1% от текущей цены по QR",
+    "buy.qr.imageAlt": "Halyk QR для оплаты комиссии",
 
     "home.fresh.eyebrow": "Свежие объявления",
     "home.fresh.title": "Актуальные автомобили",
@@ -241,7 +241,7 @@ export const translations = {
       "Цена покупателя растёт на 1% в сутки, пока не встретится с ценой продавца.",
     "price.convergenceNote": "При схождении цен примерно до 2% система создаёт Match.",
     "price.depositNotice":
-      "Контакты открываются только после того, как обе стороны внесут депозит 1% — это подтверждает серьёзность намерений.",
+      "Контакты открываются только после того, как обе стороны оплатят комиссию 0,1% — это подтверждает серьёзность намерений.",
     "price.moreAboutExchange": "Подробнее об Автобирже",
     "price.directDeal": "Прямая сделка с продавцом, без посредников",
 
@@ -267,24 +267,24 @@ export const translations = {
     "exchange.diagram.seller": "Продавец: −1% в сутки",
     "exchange.diagram.buyer": "Покупатель: +1% в сутки",
 
-    "exchange.depositsSafety.eyebrow": "Депозит и безопасность",
+    "exchange.depositsSafety.eyebrow": "Комиссия и безопасность",
     "exchange.depositsSafety.title":
       "Контакты открываются только двум подтверждённым сторонам",
     "exchange.depositsSafety.description":
-      "Депозит 1% — это не оплата автомобиля, а подтверждение серьёзности намерений. Пока не внесены оба депозита, объявления заморожены, а контакты скрыты.",
+      "Комиссия 0,1% — это не оплата автомобиля, а подтверждение серьёзности намерений. Пока обе стороны не оплатили комиссию, объявления заморожены, а контакты скрыты.",
     "exchange.depositsSafety.note1":
-      "До внесения обоих депозитов номера телефонов скрыты — это защищает продавца от случайных звонков, а покупателя — от продавцов, которые передумали в последний момент.",
+      "Пока обе стороны не оплатили комиссию, номера телефонов скрыты — это защищает продавца от случайных звонков, а покупателя — от продавцов, которые передумали в последний момент.",
     "exchange.depositsSafety.note2":
-      "Депозит — это подтверждение намерений, а не оплата автомобиля. Если сделка не состоится по вине другой стороны, депозит возвращается в полном размере.",
+      "Комиссия — это подтверждение намерений, а не оплата автомобиля. Если сделка не состоится по вине другой стороны, комиссия возвращается в полном размере.",
 
     "exchange.lifecycle.stage1": "Match создан",
-    "exchange.lifecycle.stage2": "Депозит продавца внесён",
-    "exchange.lifecycle.stage3": "Депозит покупателя внесён",
+    "exchange.lifecycle.stage2": "Комиссия продавца оплачена",
+    "exchange.lifecycle.stage3": "Комиссия покупателя оплачена",
     "exchange.lifecycle.stage4": "Контакты открыты",
     "exchange.lifecycle.expiredNote":
-      "Если депозиты не внесены вовремя, объявления снова становятся активными.",
+      "Если комиссия не оплачена вовремя, объявления снова становятся активными.",
     "exchange.lifecycle.cancelledNote":
-      "Если одна из сторон отменяет сделку, внесённый депозит возвращается.",
+      "Если одна из сторон отменяет сделку, оплаченная комиссия возвращается.",
 
     "exchange.example.eyebrow": "Пример",
     "exchange.example.title": "Продавец и покупатель на пути к Match",
@@ -309,12 +309,12 @@ export const translations = {
     "exchange.steps.step3.title": "Match",
     "exchange.steps.step3.description":
       "Когда разница доходит примерно до 2%, Автобиржа фиксирует совпадение и замораживает оба объявления.",
-    "exchange.steps.step4.title": "Депозит 1%",
+    "exchange.steps.step4.title": "Комиссия 0,1%",
     "exchange.steps.step4.description":
-      "Продавец и покупатель вносят депозит в размере 1% от цены — это подтверждает серьёзность намерений.",
+      "Продавец и покупатель оплачивают комиссию 0,1% от цены — это подтверждает серьёзность намерений.",
     "exchange.steps.step5.title": "Контакты открыты",
     "exchange.steps.step5.description":
-      "После двух депозитов стороны получают контакты друг друга и договариваются о сделке.",
+      "После оплаты комиссии обеими сторонами они получают контакты друг друга и договариваются о сделке.",
 
     "exchange.hero.title": "Цены сами находят друг друга",
     "exchange.hero.description":
@@ -357,7 +357,7 @@ export const translations = {
     "dashboard.nav.listings": "Мои объявления",
     "dashboard.nav.requests": "Заявки на покупку",
     "dashboard.nav.matches": "Matches",
-    "dashboard.nav.deposits": "Депозиты",
+    "dashboard.nav.deposits": "Комиссии",
     "dashboard.nav.notifications": "Уведомления",
     "dashboard.nav.profile": "Профиль",
     "dashboard.nav.openProfile": "Открыть профиль",
@@ -371,31 +371,33 @@ export const translations = {
     "dashboard.overview.needsAttention": "Требуют внимания",
     "dashboard.overview.noTasks":
       "Активных задач нет — мы сообщим, когда что-то потребует вашего внимания.",
-    "dashboard.overview.task.deposit": "Депозит",
+    "dashboard.overview.task.deposit": "Комиссия",
     "dashboard.overview.task.moderation": "Модерация",
     "dashboard.overview.task.moderationCta": "Посмотреть",
     "dashboard.overview.task.newNotification": "Новое уведомление",
     "dashboard.overview.deadlinePrefix": "дедлайн",
 
     "dashboard.deposits.subtitle":
-      "Депозит 1% подтверждает серьёзность намерений и открывает контакты после Match.",
+      "Комиссия 0,1% подтверждает серьёзность намерений и открывает контакты после Match.",
     "dashboard.deposits.mockNotice":
-      "Тестовый режим: оплата депозита здесь ничего не списывает по-настоящему — это симуляция для проверки сценария Auto Exchange, реальный платёжный шлюз ещё не подключён.",
+      "Тестовый режим: оплата комиссии здесь ничего не списывает по-настоящему — это симуляция для проверки сценария Auto Exchange, реальный платёжный шлюз ещё не подключён.",
     "dashboard.deposits.realNotice":
-      "Оплата депозита обрабатывается платёжным провайдером FreedomPay — вы будете перенаправлены на защищённую страницу оплаты.",
-    "dashboard.deposits.payError": "Не удалось внести депозит",
-    "dashboard.deposits.loadErrorTitle": "Не удалось загрузить депозиты",
-    "dashboard.deposits.emptyTitle": "Депозитов пока нет.",
+      "Оплата комиссии обрабатывается платёжным провайдером FreedomPay — вы будете перенаправлены на защищённую страницу оплаты.",
+    "dashboard.deposits.payError": "Не удалось оплатить комиссию",
+    "dashboard.deposits.loadErrorTitle": "Не удалось загрузить комиссии",
+    "dashboard.deposits.emptyTitle": "Комиссий пока нет.",
     "dashboard.deposits.emptyDescription":
-      "Депозит появится здесь, как только по вашему объявлению или заявке будет найден Match.",
+      "Комиссия появится здесь, как только по вашему объявлению или заявке будет найден Match.",
     "dashboard.deposits.return.verifying": "Проверяем статус оплаты…",
     "dashboard.deposits.return.verifyingDescription":
       "Это займёт несколько секунд. Не закрывайте страницу.",
     "dashboard.deposits.return.success": "Оплата прошла успешно",
     "dashboard.deposits.return.failed": "Оплата не прошла",
+    "dashboard.deposits.return.amountMismatch":
+      "Сумма оплаты не совпала с суммой комиссии. Платёж передан на проверку администратору — оплачивать повторно не нужно.",
     "dashboard.deposits.return.timeout":
-      "Не удалось подтвердить оплату сразу. Проверьте статус в разделе «Депозиты» чуть позже.",
-    "dashboard.deposits.return.backLink": "Вернуться к депозитам",
+      "Не удалось подтвердить оплату сразу. Проверьте статус в разделе «Комиссии» чуть позже.",
+    "dashboard.deposits.return.backLink": "Вернуться к комиссиям",
 
     "dashboard.listings.subtitle": "Объявления о продаже, которые вы разместили.",
     "dashboard.listings.loadErrorTitle": "Не удалось загрузить объявления",
@@ -470,12 +472,12 @@ export const translations = {
     "admin.matches.loadErrorTitle": "Не удалось загрузить сделки",
     "admin.matches.emptyTitle": "Сделок не найдено",
     "admin.matches.emptyDescription": "Попробуйте выбрать другой статус.",
-    "admin.matches.deposit": "Депозит",
-    "admin.matches.deposits": "Депозиты (продавец/покупатель)",
+    "admin.matches.deposit": "Комиссия",
+    "admin.matches.deposits": "Комиссии (продавец/покупатель)",
 
-    "admin.deposits.subtitle": "Все депозиты на платформе.",
-    "admin.deposits.loadErrorTitle": "Не удалось загрузить депозиты",
-    "admin.deposits.emptyTitle": "Депозитов не найдено",
+    "admin.deposits.subtitle": "Все комиссии на платформе.",
+    "admin.deposits.loadErrorTitle": "Не удалось загрузить комиссии",
+    "admin.deposits.emptyTitle": "Комиссий не найдено",
     "admin.deposits.emptyDescription": "Попробуйте выбрать другой статус.",
 
     "admin.users.subtitle": "Поиск пользователей по имени или телефону.",
@@ -495,8 +497,8 @@ export const translations = {
     "admin.stats.listings.frozen": "Заморожены (в сделке)",
     "admin.stats.listings.archived": "В архиве",
     "admin.stats.listings.exchange": "Участвуют в Автобирже",
-    "admin.stats.matches.awaitingDeposit": "Ожидают депозит",
-    "admin.stats.matches.partiallyPaid": "Один депозит внесён",
+    "admin.stats.matches.awaitingDeposit": "Ожидают оплату комиссии",
+    "admin.stats.matches.partiallyPaid": "Одна комиссия оплачена",
     "admin.stats.matches.confirmed": "Подтверждены",
     "admin.stats.matches.expired": "Истёк срок",
     "admin.stats.matches.cancelled": "Отменены",
@@ -589,12 +591,12 @@ export const translations = {
     "sell.steps.step3.title": "Автобиржа находит покупателя",
     "sell.steps.step3.description":
       "Когда ценовые предложения сближаются до установленного порога, система автоматически создаёт Match и фиксирует предложения.",
-    "sell.steps.step4.title": "Внесите депозит",
+    "sell.steps.step4.title": "Оплатите комиссию",
     "sell.steps.step4.description":
-      "После совпадения продавец и покупатель вносят депозит в размере 1% от согласованной цены.",
+      "После совпадения продавец и покупатель оплачивают комиссию 0,1% от согласованной цены.",
     "sell.steps.step5.title": "Получите контакт покупателя",
     "sell.steps.step5.description":
-      "После подтверждения обоих депозитов участникам открываются контакты друг друга.",
+      "После подтверждения оплаты комиссии обеими сторонами участникам открываются контакты друг друга.",
 
     "requestForm.yearFrom": "Год от",
     "requestForm.yearTo": "Год до",
@@ -683,13 +685,13 @@ export const translations = {
     "notification.unread": "Оқылмаған",
 
     "match.finalPrice": "Соңғы баға",
-    "match.yourDeposit": "Сіздің депозитіңіз",
+    "match.yourDeposit": "Сіздің комиссияңыз",
     "match.deadline": "Мерзімі",
-    "match.sellerDeposit": "Сатушының депозиті:",
-    "match.buyerDeposit": "Сатып алушының депозиті:",
+    "match.sellerDeposit": "Сатушының комиссиясы:",
+    "match.buyerDeposit": "Сатып алушының комиссиясы:",
     "match.paid": "төленді",
     "match.pending": "күтілуде",
-    "match.payDeposit": "Депозит салу",
+    "match.payDeposit": "Комиссияны төлеу",
     "match.contactsOpen": "Байланыстар ашық →",
     "match.viewSimilar": "Ұқсастарын қарау",
 
@@ -746,7 +748,7 @@ export const translations = {
       "Сәйкестікті қолмен іздеудің қажеті жоқ — Автобиржа бағалар мен қатысушыларды өзі біріктіреді.",
     "home.whyUs.benefit2.title": "Нақты ниеттер",
     "home.whyUs.benefit2.description":
-      "Екі жақтың да депозиті мәміленің шын ниетпен жасалғанын растайды.",
+      "Екі жақтың да комиссиясы мәміленің шын ниетпен жасалғанын растайды.",
     "home.whyUs.benefit3.title": "Баға өзгерісінің ашықтығы",
     "home.whyUs.benefit3.description":
       "Баға қалай өзгеріп жатқанын және мәмілеге қаншалықты жақындағанын әрдайым көресіз.",
@@ -757,12 +759,12 @@ export const translations = {
     "home.trust.eyebrow": "Мәміле қауіпсіздігі",
     "home.trust.title": "Байланыстар тек екі расталған жаққа ғана ашылады",
     "home.trust.description":
-      "1% депозит — бұл автокөлікке төлем емес, ниеттің шындығын растау. Екі депозит те енгізілмейінше, хабарландырулар тоқтатылған, ал телефон нөмірлері жасырын.",
+      "0,1% комиссия — бұл автокөлікке төлем емес, ниеттің шындығын растау. Екі жақ та комиссия төлемейінше, хабарландырулар тоқтатылған, ал телефон нөмірлері жасырын.",
     "home.trust.note":
       "Бұл сатушыларды кездейсоқ қоңыраулардан, ал сатып алушыларды соңғы сәтте ойын өзгерткен сатушылардан қорғайды.",
     "home.trust.matchCreated": "Match жасалды, хабарландырулар тоқтатылды",
-    "home.trust.checklist1": "Сатушының депозиті расталды",
-    "home.trust.checklist2": "Сатып алушының депозиті расталды",
+    "home.trust.checklist1": "Сатушының комиссиясы төленді",
+    "home.trust.checklist2": "Сатып алушының комиссиясы төленді",
     "home.trust.checklist3": "Телефон нөмірлері екі жаққа да ашық",
     "home.trust.contactsOpen":
       "Байланыстар ашық — мәміле туралы келісуге болады",
@@ -777,12 +779,12 @@ export const translations = {
     "home.exchange.step2.title": "Match және тоқтату",
     "home.exchange.step2.description":
       "Баға айырмашылығы шамамен 2%-ға жеткенде, жүйе Match жасайды. Екі хабарландыру да тоқтатылады.",
-    "home.exchange.step3.title": "1% депозит",
+    "home.exchange.step3.title": "0,1% комиссия",
     "home.exchange.step3.description":
-      "Сатушы мен сатып алушы мәміле бағасының 1% мөлшерінде депозит енгізеді — бұл ниеттің шындығын растайды.",
+      "Сатушы мен сатып алушы мәміле бағасының 0,1% мөлшерінде комиссия төлейді — бұл ниеттің шындығын растайды.",
     "home.exchange.step4.title": "Байланыстар ашық",
     "home.exchange.step4.description":
-      "Екі депозит те енгізілгеннен кейін, тараптар бір-бірінің байланыстарын алып, мәміле туралы келіседі.",
+      "Екі жақ та комиссия төлегеннен кейін, тараптар бір-бірінің байланыстарын алып, мәміле туралы келіседі.",
 
     "home.buyingWays.eyebrow": "Мәмілеге апаратын екі жол",
     "home.buyingWays.title": "Автокөлік сатып алудың екі тәсілі",
@@ -790,10 +792,10 @@ export const translations = {
       "Хабарландыру бойынша әдеттегі сатып алуды таңдаңыз немесе баға таңдауды Автобиржаға сеніп тапсырыңыз.",
     "home.buyingWays.way1.title": "Қазір ағымдағы баға бойынша сатып алу",
     "home.buyingWays.way1.description":
-      "Ағымдағы баға бойынша автокөлікті таңдап, құнының 1%-ын QR арқылы төлеп, бізбен байланысыңыз. Депозит расталғаннан кейін сатушының байланысын береміз.",
+      "Ағымдағы баға бойынша автокөлікті таңдап, құнының 0,1% комиссиясын QR арқылы төлеп, бізбен байланысыңыз. Комиссия төлемі расталғаннан кейін сатушының байланысын береміз.",
     "home.buyingWays.way1.point1": "Автокөлікті ағымдағы баға бойынша сатып алу",
-    "home.buyingWays.way1.point2": "Депозит — автокөлік құнының 1%-ы",
-    "home.buyingWays.way1.point3": "Депозит расталғаннан кейін сатушының байланысы ашылады",
+    "home.buyingWays.way1.point2": "Комиссия — автокөлік құнының 0,1%-ы",
+    "home.buyingWays.way1.point3": "Комиссия төлемі расталғаннан кейін сатушының байланысы ашылады",
     "home.buyingWays.way1.point4": "Мәмілені бірден бастауға болады",
     "home.buyingWays.way1.cta": "Автокөліктерді қарау",
     "home.buyingWays.way2.title": "Автобиржа арқылы сатып алу",
@@ -801,24 +803,24 @@ export const translations = {
       "Төлеуге дайын бағаңызды көрсетіңіз. Бағалар сәйкес келгенде жүйе сізді сатушымен өзі біріктіреді.",
     "home.buyingWays.way2.point1": "Сатушының бағасы төмендейді, сіздікі — өседі",
     "home.buyingWays.way2.point2": "Match автоматты түрде жасалады",
-    "home.buyingWays.way2.point3": "Байланыстар депозиттен кейін ашылады",
+    "home.buyingWays.way2.point3": "Байланыстар комиссия төленгеннен кейін ашылады",
     "home.buyingWays.way2.cta": "Сатып алу өтінімін жасау",
 
     "buy.howTo.eyebrow": "Тікелей сатып алу",
     "buy.howTo.title": "Ағымдағы баға бойынша қалай сатып алу керек",
     "buy.howTo.subtitle":
-      "Автокөлікті тікелей сатып алу үшін ағымдағы бағаның 1% депозитін төлеңіз.",
+      "Автокөлікті тікелей сатып алу үшін ағымдағы бағаның 0,1% комиссиясын төлеңіз.",
     "buy.howTo.step1.title": "Автокөлікті таңдаңыз",
     "buy.howTo.step1.description":
       "Қолайлы хабарландыруды ашып, ағымдағы бағаны тексеріңіз.",
-    "buy.howTo.step2.title": "QR арқылы ағымдағы бағаның 1%-ын төлеңіз",
+    "buy.howTo.step2.title": "QR арқылы ағымдағы бағаның 0,1% комиссиясын төлеңіз",
     "buy.howTo.step2.description":
-      "Автокөліктің ағымдағы құнының 1%-ын QR-код арқылы төлеңіз.",
+      "Автокөліктің ағымдағы құнының 0,1% комиссиясын QR-код арқылы төлеңіз.",
     "buy.howTo.step3.title": "Администратордың байланысын алыңыз",
     "buy.howTo.step3.description":
       "Төлем расталғаннан кейін Автобиржа администраторымен +7 702 789 7120 нөмірі арқылы байланысыңыз — ол сатушымен мәмілені рәсімдеуге көмектеседі.",
-    "buy.qr.text": "QR арқылы ағымдағы бағаның 1%-ын төлеңіз",
-    "buy.qr.imageAlt": "Депозит төлеуге арналған Halyk QR",
+    "buy.qr.text": "QR арқылы ағымдағы бағаның 0,1% комиссиясын төлеңіз",
+    "buy.qr.imageAlt": "Комиссия төлеуге арналған Halyk QR",
 
     "home.fresh.eyebrow": "Жаңа хабарландырулар",
     "home.fresh.title": "Өзекті автокөліктер",
@@ -859,7 +861,7 @@ export const translations = {
       "Сатып алушының бағасы тәулігіне 1%-ға өседі, сатушының бағасымен теңескенше.",
     "price.convergenceNote": "Бағалар шамамен 2%-ға дейін жақындағанда жүйе Match жасайды.",
     "price.depositNotice":
-      "Байланыстар тек екі жақ та 1% депозит енгізгеннен кейін ашылады — бұл ниеттің шындығын растайды.",
+      "Байланыстар тек екі жақ та 0,1% комиссия төлегеннен кейін ашылады — бұл ниеттің шындығын растайды.",
     "price.moreAboutExchange": "Автобиржа туралы толығырақ",
     "price.directDeal": "Сатушымен делдалсыз тікелей мәміле",
 
@@ -885,24 +887,24 @@ export const translations = {
     "exchange.diagram.seller": "Сатушы: −1% тәулігіне",
     "exchange.diagram.buyer": "Сатып алушы: +1% тәулігіне",
 
-    "exchange.depositsSafety.eyebrow": "Депозит және қауіпсіздік",
+    "exchange.depositsSafety.eyebrow": "Комиссия және қауіпсіздік",
     "exchange.depositsSafety.title":
       "Байланыстар тек екі расталған жаққа ғана ашылады",
     "exchange.depositsSafety.description":
-      "1% депозит — бұл автокөлікке төлем емес, ниеттің шындығын растау. Екі депозит те енгізілмейінше, хабарландырулар тоқтатылған, ал байланыстар жасырын.",
+      "0,1% комиссия — бұл автокөлікке төлем емес, ниеттің шындығын растау. Екі жақ та комиссия төлемейінше, хабарландырулар тоқтатылған, ал байланыстар жасырын.",
     "exchange.depositsSafety.note1":
-      "Екі депозит те енгізілгенге дейін телефон нөмірлері жасырын — бұл сатушыны кездейсоқ қоңыраулардан, ал сатып алушыны соңғы сәтте ойын өзгерткен сатушылардан қорғайды.",
+      "Екі жақ та комиссия төлегенге дейін телефон нөмірлері жасырын — бұл сатушыны кездейсоқ қоңыраулардан, ал сатып алушыны соңғы сәтте ойын өзгерткен сатушылардан қорғайды.",
     "exchange.depositsSafety.note2":
-      "Депозит — бұл ниеттің растауы, автокөлікке төлем емес. Мәміле екінші жақтың кінәсінен орындалмаса, депозит толық көлемде қайтарылады.",
+      "Комиссия — бұл ниеттің растауы, автокөлікке төлем емес. Мәміле екінші жақтың кінәсінен орындалмаса, комиссия толық көлемде қайтарылады.",
 
     "exchange.lifecycle.stage1": "Match жасалды",
-    "exchange.lifecycle.stage2": "Сатушының депозиті енгізілді",
-    "exchange.lifecycle.stage3": "Сатып алушының депозиті енгізілді",
+    "exchange.lifecycle.stage2": "Сатушының комиссиясы төленді",
+    "exchange.lifecycle.stage3": "Сатып алушының комиссиясы төленді",
     "exchange.lifecycle.stage4": "Байланыстар ашылды",
     "exchange.lifecycle.expiredNote":
-      "Депозиттер уақытында енгізілмесе, хабарландырулар қайта белсенді болады.",
+      "Комиссия уақытында төленбесе, хабарландырулар қайта белсенді болады.",
     "exchange.lifecycle.cancelledNote":
-      "Тараптардың бірі мәміледен бас тартса, енгізілген депозит қайтарылады.",
+      "Тараптардың бірі мәміледен бас тартса, төленген комиссия қайтарылады.",
 
     "exchange.example.eyebrow": "Мысал",
     "exchange.example.title": "Сатушы мен сатып алушы Match-қа қарай",
@@ -927,12 +929,12 @@ export const translations = {
     "exchange.steps.step3.title": "Match",
     "exchange.steps.step3.description":
       "Айырмашылық шамамен 2%-ға жеткенде, Автобиржа сәйкестікті тіркеп, екі хабарландыруды да тоқтатады.",
-    "exchange.steps.step4.title": "1% депозит",
+    "exchange.steps.step4.title": "0,1% комиссия",
     "exchange.steps.step4.description":
-      "Сатушы мен сатып алушы бағаның 1% мөлшерінде депозит енгізеді — бұл ниеттің шындығын растайды.",
+      "Сатушы мен сатып алушы бағаның 0,1% мөлшерінде комиссия төлейді — бұл ниеттің шындығын растайды.",
     "exchange.steps.step5.title": "Байланыстар ашылды",
     "exchange.steps.step5.description":
-      "Екі депозиттен кейін тараптар бір-бірінің байланыстарын алып, мәміле туралы келіседі.",
+      "Екі жақ та комиссия төлегеннен кейін тараптар бір-бірінің байланыстарын алып, мәміле туралы келіседі.",
 
     "exchange.hero.title": "Бағалар бір-бірін өздігінен табады",
     "exchange.hero.description":
@@ -975,7 +977,7 @@ export const translations = {
     "dashboard.nav.listings": "Менің хабарландыруларым",
     "dashboard.nav.requests": "Сатып алу өтінімдері",
     "dashboard.nav.matches": "Matches",
-    "dashboard.nav.deposits": "Депозиттер",
+    "dashboard.nav.deposits": "Комиссиялар",
     "dashboard.nav.notifications": "Ескертулер",
     "dashboard.nav.profile": "Профиль",
     "dashboard.nav.openProfile": "Профильді ашу",
@@ -989,31 +991,33 @@ export const translations = {
     "dashboard.overview.needsAttention": "Назар аударуды қажет етеді",
     "dashboard.overview.noTasks":
       "Белсенді тапсырмалар жоқ — бірдеңе назар аударуды қажет еткенде хабарлаймыз.",
-    "dashboard.overview.task.deposit": "Депозит",
+    "dashboard.overview.task.deposit": "Комиссия",
     "dashboard.overview.task.moderation": "Модерация",
     "dashboard.overview.task.moderationCta": "Қарау",
     "dashboard.overview.task.newNotification": "Жаңа ескерту",
     "dashboard.overview.deadlinePrefix": "мерзімі",
 
     "dashboard.deposits.subtitle":
-      "1% депозит ниеттің шындығын растайды және Match-тан кейін байланыстарды ашады.",
+      "0,1% комиссия ниеттің шындығын растайды және Match-тан кейін байланыстарды ашады.",
     "dashboard.deposits.mockNotice":
-      "Тестілік режим: мұндағы депозит төлемі нақты ақша есептен шығармайды — бұл Auto Exchange сценарийін тексеруге арналған симуляция, нақты төлем шлюзі әлі қосылмаған.",
+      "Тестілік режим: мұндағы комиссия төлемі нақты ақша есептен шығармайды — бұл Auto Exchange сценарийін тексеруге арналған симуляция, нақты төлем шлюзі әлі қосылмаған.",
     "dashboard.deposits.realNotice":
-      "Депозит төлемі FreedomPay төлем провайдері арқылы өңделеді — сіз қорғалған төлем бетіне бағытталасыз.",
-    "dashboard.deposits.payError": "Депозитті енгізу мүмкін болмады",
-    "dashboard.deposits.loadErrorTitle": "Депозиттерді жүктеу мүмкін болмады",
-    "dashboard.deposits.emptyTitle": "Депозиттер әзірше жоқ.",
+      "Комиссия төлемі FreedomPay төлем провайдері арқылы өңделеді — сіз қорғалған төлем бетіне бағытталасыз.",
+    "dashboard.deposits.payError": "Комиссияны төлеу мүмкін болмады",
+    "dashboard.deposits.loadErrorTitle": "Комиссияларды жүктеу мүмкін болмады",
+    "dashboard.deposits.emptyTitle": "Комиссиялар әзірше жоқ.",
     "dashboard.deposits.emptyDescription":
-      "Депозит хабарландыруыңыз немесе өтініміңіз бойынша Match табылғанда осында пайда болады.",
+      "Комиссия хабарландыруыңыз немесе өтініміңіз бойынша Match табылғанда осында пайда болады.",
     "dashboard.deposits.return.verifying": "Төлем мәртебесін тексеріп жатырмыз…",
     "dashboard.deposits.return.verifyingDescription":
       "Бұл бірнеше секунд алады. Бетті жаппаңыз.",
     "dashboard.deposits.return.success": "Төлем сәтті өтті",
     "dashboard.deposits.return.failed": "Төлем өтпеді",
+    "dashboard.deposits.return.amountMismatch":
+      "Төлем сомасы комиссия сомасымен сәйкес келмеді. Төлем әкімшінің тексеруіне жіберілді — қайта төлеудің қажеті жоқ.",
     "dashboard.deposits.return.timeout":
-      "Төлемді дереу растау мүмкін болмады. «Депозиттер» бөлімінен мәртебені кейінірек тексеріңіз.",
-    "dashboard.deposits.return.backLink": "Депозиттерге оралу",
+      "Төлемді дереу растау мүмкін болмады. «Комиссиялар» бөлімінен мәртебені кейінірек тексеріңіз.",
+    "dashboard.deposits.return.backLink": "Комиссияларға оралу",
 
     "dashboard.listings.subtitle": "Сіз орналастырған сату хабарландырулары.",
     "dashboard.listings.loadErrorTitle": "Хабарландыруларды жүктеу мүмкін болмады",
@@ -1089,12 +1093,12 @@ export const translations = {
     "admin.matches.loadErrorTitle": "Мәмілелерді жүктеу мүмкін болмады",
     "admin.matches.emptyTitle": "Мәмілелер табылмады",
     "admin.matches.emptyDescription": "Басқа мәртебені таңдап көріңіз.",
-    "admin.matches.deposit": "Депозит",
-    "admin.matches.deposits": "Депозиттер (сатушы/сатып алушы)",
+    "admin.matches.deposit": "Комиссия",
+    "admin.matches.deposits": "Комиссиялар (сатушы/сатып алушы)",
 
-    "admin.deposits.subtitle": "Платформадағы барлық депозиттер.",
-    "admin.deposits.loadErrorTitle": "Депозиттерді жүктеу мүмкін болмады",
-    "admin.deposits.emptyTitle": "Депозиттер табылмады",
+    "admin.deposits.subtitle": "Платформадағы барлық комиссиялар.",
+    "admin.deposits.loadErrorTitle": "Комиссияларды жүктеу мүмкін болмады",
+    "admin.deposits.emptyTitle": "Комиссиялар табылмады",
     "admin.deposits.emptyDescription": "Басқа мәртебені таңдап көріңіз.",
 
     "admin.users.subtitle": "Пайдаланушыларды аты немесе телефоны бойынша іздеу.",
@@ -1114,8 +1118,8 @@ export const translations = {
     "admin.stats.listings.frozen": "Тоқтатылған (мәміледе)",
     "admin.stats.listings.archived": "Мұрағатта",
     "admin.stats.listings.exchange": "Автобиржаға қатысады",
-    "admin.stats.matches.awaitingDeposit": "Депозит күтілуде",
-    "admin.stats.matches.partiallyPaid": "Бір депозит енгізілді",
+    "admin.stats.matches.awaitingDeposit": "Комиссия төлемі күтілуде",
+    "admin.stats.matches.partiallyPaid": "Бір комиссия төленді",
     "admin.stats.matches.confirmed": "Расталды",
     "admin.stats.matches.expired": "Мерзімі өтті",
     "admin.stats.matches.cancelled": "Болдырылмады",
@@ -1208,12 +1212,12 @@ export const translations = {
     "sell.steps.step3.title": "Автобиржа сатып алушыны табады",
     "sell.steps.step3.description":
       "Баға ұсыныстары белгіленген шекке дейін жақындағанда, жүйе автоматты түрде Match жасайды және ұсыныстарды тіркейді.",
-    "sell.steps.step4.title": "Депозит енгізіңіз",
+    "sell.steps.step4.title": "Комиссияны төлеңіз",
     "sell.steps.step4.description":
-      "Сәйкестік табылғаннан кейін сатушы мен сатып алушы келісілген баға сомасының 1% мөлшерінде депозит енгізеді.",
+      "Сәйкестік табылғаннан кейін сатушы мен сатып алушы келісілген баға сомасының 0,1% мөлшерінде комиссия төлейді.",
     "sell.steps.step5.title": "Сатып алушының байланысын алыңыз",
     "sell.steps.step5.description":
-      "Екі депозит те расталғаннан кейін қатысушыларға бір-бірінің байланыстары ашылады.",
+      "Екі жақтың да комиссия төлемі расталғаннан кейін қатысушыларға бір-бірінің байланыстары ашылады.",
 
     "requestForm.yearFrom": "Жылдан",
     "requestForm.yearTo": "Жылға дейін",

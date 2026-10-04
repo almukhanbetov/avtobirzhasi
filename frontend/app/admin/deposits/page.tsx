@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { AdminDepositsContent } from "@/components/admin/AdminDepositsContent";
 
 export const metadata: Metadata = {
-  title: "Депозиты — Админка",
+  title: "Комиссии — Админка",
   robots: { index: false, follow: false },
 };
 

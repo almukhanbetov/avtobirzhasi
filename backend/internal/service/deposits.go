@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -17,11 +18,31 @@ var (
 	// ErrDepositNotPending is returned when the deposit (or its match) has
 	// already moved past the point where starting a new payment applies.
 	ErrDepositNotPending = errors.New("deposit is not payable")
-	// ErrWebhookAmountMismatch is returned when a webhook's reported
-	// amount/currency doesn't match the deposit's own server-computed
-	// amount — the event is rejected, never applied, on this error.
-	ErrWebhookAmountMismatch = errors.New("webhook amount/currency does not match deposit")
+	// ErrPaymentAmountMismatch is returned when a signed webhook reports
+	// a payment that doesn't match the deposit's stored amount in KZT (the
+	// deposit is then moved to 'amount_mismatch' for manual review), or
+	// when the deposit's stored amount disagrees with its match's. The
+	// payment is never applied: the match doesn't advance and contacts
+	// stay closed.
+	ErrPaymentAmountMismatch = errors.New("payment amount/currency does not match stored commission")
 )
+
+// verifyChargedAmount is the single check every provider-confirmed
+// payment must pass before a deposit may be marked paid. The expected
+// amount is always the stored one (deposits.amount, fixed when the match
+// was created) — never recomputed from a listing's current price or the
+// current commission rate. All values are whole tenge (int64); FreedomPay's
+// decimal pg_amount is parsed into whole tenge by parseTengeAmount, which
+// rejects any fractional part, so no floating point is involved.
+func verifyChargedAmount(depositID string, storedAmount, matchAmount, chargedAmount int64, chargedCurrency string) error {
+	if storedAmount != matchAmount {
+		return fmt.Errorf("%w: deposit %s stores %d KZT but its match stores %d KZT", ErrPaymentAmountMismatch, depositID, storedAmount, matchAmount)
+	}
+	if chargedCurrency != "KZT" || chargedAmount != storedAmount {
+		return fmt.Errorf("%w: deposit %s expects %d KZT, provider reported %d %s", ErrPaymentAmountMismatch, depositID, storedAmount, chargedAmount, chargedCurrency)
+	}
+	return nil
+}
 
 // DepositService implements the deposit payment flow: start a payment
 // session through a PaymentProvider (see payment.go), and — once the
@@ -99,14 +120,21 @@ func (s *DepositService) InitiatePay(ctx context.Context, depositID, userID stri
 	}
 
 	var matchStatus string
+	var matchAmount int64
 	err = tx.QueryRow(ctx,
-		`SELECT status FROM matches WHERE id = $1 FOR UPDATE`, deposit.MatchID,
-	).Scan(&matchStatus)
+		`SELECT status, deposit_amount FROM matches WHERE id = $1 FOR UPDATE`, deposit.MatchID,
+	).Scan(&matchStatus, &matchAmount)
 	if err != nil {
 		return nil, err
 	}
 	if matchStatus == "expired" || matchStatus == "cancelled" {
 		return nil, ErrDepositNotPending
+	}
+	// deposits.amount is the one authoritative amount: it is what the
+	// provider is asked to charge (below) and what every confirmation is
+	// verified against. Refuse to start a session if the match disagrees.
+	if deposit.Amount <= 0 || deposit.Amount != matchAmount {
+		return nil, fmt.Errorf("%w: deposit %s stores %d KZT but its match stores %d KZT", ErrPaymentAmountMismatch, deposit.ID, deposit.Amount, matchAmount)
 	}
 
 	// The session is created inside the same row-locked transaction as
@@ -146,7 +174,16 @@ func (s *DepositService) InitiatePay(ctx context.Context, depositID, userID stri
 // synchronous resolution in InitiatePay) that ever marks a deposit paid,
 // per this stage's requirement that a success redirect alone must never do
 // so. Idempotent: a deposit that's already left 'pending' (paid/failed/
-// refunded) is left untouched — gateways commonly retry webhook delivery.
+// refunded/amount_mismatch) is left untouched — gateways commonly retry
+// webhook delivery.
+//
+// A succeeded event whose amount/currency doesn't match the stored
+// commission moves the deposit to 'amount_mismatch' (recording what the
+// provider reported) and returns ErrPaymentAmountMismatch. That state is
+// terminal for automation: it is never paid, can't be re-paid, and every
+// later event for it — including one reporting the correct amount — is
+// ignored, since one transaction reporting two different amounts needs a
+// human to decide which is true.
 func (s *DepositService) ConfirmWebhook(ctx context.Context, event WebhookEvent) error {
 	tx, err := s.db.Begin(ctx)
 	if err != nil {
@@ -155,16 +192,19 @@ func (s *DepositService) ConfirmWebhook(ctx context.Context, event WebhookEvent)
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var deposit struct {
-		ID      string
-		MatchID string
-		UserID  string
-		Amount  int64
-		Status  string
+		ID          string
+		MatchID     string
+		UserID      string
+		Amount      int64
+		MatchAmount int64
+		Status      string
 	}
 	err = tx.QueryRow(ctx,
-		`SELECT id, match_id, user_id, amount, status FROM deposits WHERE provider_payment_id = $1 FOR UPDATE`,
+		`SELECT d.id, d.match_id, d.user_id, d.amount, m.deposit_amount, d.status
+		 FROM deposits d JOIN matches m ON m.id = d.match_id
+		 WHERE d.provider_payment_id = $1 FOR UPDATE OF d`,
 		event.ProviderPaymentID,
-	).Scan(&deposit.ID, &deposit.MatchID, &deposit.UserID, &deposit.Amount, &deposit.Status)
+	).Scan(&deposit.ID, &deposit.MatchID, &deposit.UserID, &deposit.Amount, &deposit.MatchAmount, &deposit.Status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrDepositNotFound
 	}
@@ -180,9 +220,21 @@ func (s *DepositService) ConfirmWebhook(ctx context.Context, event WebhookEvent)
 	case PaymentStatusSucceeded:
 		// Never trust the webhook's amount/currency for the write itself —
 		// only use them to confirm this event actually matches what the
-		// deposit is server-computed to cost.
-		if event.Currency != "KZT" || event.AmountTenge != deposit.Amount {
-			return fmt.Errorf("%w: got %d %s, deposit expects %d KZT", ErrWebhookAmountMismatch, event.AmountTenge, event.Currency, deposit.Amount)
+		// deposit is stored to cost.
+		if mismatch := verifyChargedAmount(deposit.ID, deposit.Amount, deposit.MatchAmount, event.AmountTenge, event.Currency); mismatch != nil {
+			// Only the deposit row changes: the match, its paid flags and
+			// notifications are untouched, so contacts stay closed.
+			if _, err := tx.Exec(ctx,
+				`UPDATE deposits SET status = 'amount_mismatch', mismatch_reported_amount = $2,
+				 mismatch_reported_currency = $3, mismatch_at = now() WHERE id = $1`,
+				deposit.ID, event.AmountTenge, event.Currency,
+			); err != nil {
+				return err
+			}
+			if err := tx.Commit(ctx); err != nil {
+				return err
+			}
+			return mismatch
 		}
 		if _, err := s.finalizeDepositPaid(ctx, tx, deposit.ID, deposit.MatchID, deposit.UserID, s.provider.Name(), event.ProviderPaymentID); err != nil {
 			return err
@@ -198,11 +250,11 @@ func (s *DepositService) ConfirmWebhook(ctx context.Context, event WebhookEvent)
 	return tx.Commit(ctx)
 }
 
-// CheckStatus is the fallback the frontend polls after being redirected
-// back from a hosted payment page, for when the webhook hasn't arrived
-// yet (or was lost). If the deposit is still 'pending' and a real
-// provider is attached, it actively asks the provider for the current
-// status rather than only reading the (possibly stale) DB row.
+// CheckStatus is what the frontend polls after being redirected back from
+// a hosted payment page. If the deposit is still 'pending' and a real
+// provider is attached, it also asks the provider for the current status
+// (see reconcileFromProvider) — which can only ever record a failure,
+// never a success.
 func (s *DepositService) CheckStatus(ctx context.Context, depositID, userID string) (*PaymentSession, error) {
 	var providerPaymentID, providerName, status, matchID string
 	err := s.db.QueryRow(ctx, `
@@ -238,12 +290,20 @@ func (s *DepositService) CheckStatus(ctx context.Context, depositID, userID stri
 }
 
 // reconcileFromProvider asks the provider directly for a payment's status
-// and applies it if it has resolved. Used as a fallback when a webhook is
-// delayed — never the primary path.
+// while the webhook is delayed. It never marks a deposit paid: the status
+// API's response (get_status3.php) is neither signed-checked here nor known
+// to carry the charged amount — its field names were never observed from a
+// real FreedomPay response — so it can't pass the amount check every paid
+// deposit requires. A "succeeded" answer just leaves the deposit pending
+// for the signed webhook (ConfirmWebhook) to confirm. Only a definitive
+// failure is applied, which never opens anything.
 func (s *DepositService) reconcileFromProvider(ctx context.Context, depositID, providerPaymentID string) error {
 	status, err := s.provider.GetPaymentStatus(ctx, providerPaymentID)
-	if err != nil || status == PaymentStatusPending {
-		return nil // provider error or still pending — nothing to apply, try again later
+	if err != nil || status != PaymentStatusFailed {
+		if status == PaymentStatusSucceeded {
+			log.Printf("deposit %s: status API reports payment %q succeeded — waiting for the signed webhook to verify the amount", depositID, providerPaymentID)
+		}
+		return nil
 	}
 
 	tx, err := s.db.Begin(ctx)
@@ -252,27 +312,17 @@ func (s *DepositService) reconcileFromProvider(ctx context.Context, depositID, p
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	var deposit struct {
-		ID, MatchID, UserID, Status string
-	}
+	var depositStatus string
 	if err := tx.QueryRow(ctx,
-		`SELECT id, match_id, user_id, status FROM deposits WHERE id = $1 FOR UPDATE`, depositID,
-	).Scan(&deposit.ID, &deposit.MatchID, &deposit.UserID, &deposit.Status); err != nil {
+		`SELECT status FROM deposits WHERE id = $1 FOR UPDATE`, depositID,
+	).Scan(&depositStatus); err != nil {
 		return err
 	}
-	if deposit.Status != "pending" {
+	if depositStatus != "pending" {
 		return tx.Commit(ctx) // already resolved (by a webhook that arrived meanwhile)
 	}
-
-	switch status {
-	case PaymentStatusSucceeded:
-		if _, err := s.finalizeDepositPaid(ctx, tx, deposit.ID, deposit.MatchID, deposit.UserID, s.provider.Name(), providerPaymentID); err != nil {
-			return err
-		}
-	case PaymentStatusFailed:
-		if _, err := tx.Exec(ctx, `UPDATE deposits SET status = 'failed', failed_at = now() WHERE id = $1`, deposit.ID); err != nil {
-			return err
-		}
+	if _, err := tx.Exec(ctx, `UPDATE deposits SET status = 'failed', failed_at = now() WHERE id = $1`, depositID); err != nil {
+		return err
 	}
 	return tx.Commit(ctx)
 }
@@ -327,7 +377,7 @@ func (s *DepositService) finalizeDepositPaid(ctx context.Context, tx pgx.Tx, dep
 
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO notifications (user_id, type, message, related_match_id) VALUES ($1, 'deposit_received', $2, $3)`,
-		depositUserID, fmt.Sprintf("Депозит по сделке %s получен и подтверждён.", carLabel), matchID,
+		depositUserID, fmt.Sprintf("Комиссия по сделке %s оплачена и подтверждена.", carLabel), matchID,
 	); err != nil {
 		return "", err
 	}

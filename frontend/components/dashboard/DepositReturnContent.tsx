@@ -61,6 +61,11 @@ export function DepositReturnContent() {
             </p>
           </>
         )
+      ) : status === "amount_mismatch" ? (
+        <>
+          <XCircle size={40} className="text-warning" />
+          <p className="text-[15px] text-foreground">{t("dashboard.deposits.return.amountMismatch")}</p>
+        </>
       ) : status === "paid" ? (
         <>
           <CheckCircle2 size={40} className="text-success" />
