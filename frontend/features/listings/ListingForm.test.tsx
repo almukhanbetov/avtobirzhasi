@@ -80,7 +80,7 @@ function renderCreate() {
   );
 }
 
-async function fillStep1({ withDistrict = false } = {}) {
+async function fillStep1() {
   fireEvent.change(screen.getByLabelText("Марка"), { target: { value: "Toyota" } });
   fireEvent.change(screen.getByLabelText("Модель"), { target: { value: "Camry" } });
   fireEvent.change(screen.getByLabelText("Год выпуска"), { target: { value: "2020" } });
@@ -90,11 +90,6 @@ async function fillStep1({ withDistrict = false } = {}) {
   fireEvent.change(screen.getByLabelText("Регион"), { target: { value: "r-almaty-obl" } });
   await screen.findByRole("option", { name: "Конаев" });
   fireEvent.change(screen.getByLabelText("Город"), { target: { value: "c-konaev" } });
-
-  if (withDistrict) {
-    const districtSelect = await screen.findByLabelText("Район");
-    fireEvent.change(districtSelect, { target: { value: "d-almaly" } });
-  }
 }
 
 function fillStep2() {
@@ -145,9 +140,9 @@ beforeEach(() => {
 });
 
 describe("ListingForm create — LocationSelector integration", () => {
-  it("submits region, city and district as UUIDs alongside the derived legacy region text", async () => {
+  it("submits region and city as UUIDs alongside the derived legacy region text, with no district", async () => {
     renderCreate();
-    await fillStep1({ withDistrict: true });
+    await fillStep1();
     fireEvent.click(screen.getByRole("button", { name: /далее/i }));
     await screen.findByText("Коробка");
     fillStep2();
@@ -162,10 +157,26 @@ describe("ListingForm create — LocationSelector integration", () => {
           region: "Конаев",
           regionId: "r-almaty-obl",
           cityId: "c-konaev",
-          districtId: "d-almaly",
+          districtId: undefined,
         }),
       ),
     );
+  });
+
+  it("/sell/new renders Region and City but never a District selector, even when the city has districts", async () => {
+    renderCreate();
+    await fillStep1();
+
+    expect(screen.getByLabelText("Регион")).toBeTruthy();
+    expect((screen.getByLabelText("Город") as HTMLSelectElement).value).toBe("c-konaev");
+    // c-konaev has a district in the mocks — in edit mode it would render.
+    await waitFor(() => expect(screen.getByRole("button", { name: /далее/i })).toBeTruthy());
+    expect(screen.queryByLabelText("Район")).toBeNull();
+    expect(screen.queryByText("Выберите район")).toBeNull();
+    expect(listDistrictsByCity).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: /далее/i }));
+    expect(await screen.findByText("Коробка")).toBeTruthy();
   });
 
   it("a region with no city chosen is still a valid, submittable location", async () => {

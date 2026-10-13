@@ -55,6 +55,7 @@ export function LocationSelector({
   onChange,
   disabled,
   regionPlaceholder,
+  showDistrict = true,
 }: {
   value: LocationValue;
   onChange: (next: LocationValue) => void;
@@ -65,6 +66,10 @@ export function LocationSelector({
   // choose one", passes t("quickSearch.anyRegion") instead. No other
   // behavior changes.
   regionPlaceholder?: string;
+  // When false, the district <Select> is never rendered (and districts are
+  // never fetched). Every existing caller keeps it (nothing passed); only
+  // ListingForm's create mode (/sell/new) opts out.
+  showDistrict?: boolean;
 }) {
   const { lang, t } = useLanguage();
 
@@ -84,7 +89,7 @@ export function LocationSelector({
   const districtsQuery = useQuery({
     queryKey: ["locations", "districts", value.cityId],
     queryFn: () => listDistrictsByCity(value.cityId as string),
-    enabled: Boolean(value.cityId),
+    enabled: showDistrict && Boolean(value.cityId),
     staleTime: 5 * 60 * 1000,
   });
 
@@ -166,7 +171,7 @@ export function LocationSelector({
         </p>
       ) : null}
 
-      {value.cityId && districts.length > 0 ? (
+      {showDistrict && value.cityId && districts.length > 0 ? (
         <Select
           label={t("locationSelector.district")}
           value={value.districtId ?? ""}
@@ -181,7 +186,7 @@ export function LocationSelector({
           ))}
         </Select>
       ) : null}
-      {value.cityId && districtsQuery.isError ? (
+      {showDistrict && value.cityId && districtsQuery.isError ? (
         <p className="text-[13px] text-destructive">{t("locationSelector.loadError")}</p>
       ) : null}
     </div>
