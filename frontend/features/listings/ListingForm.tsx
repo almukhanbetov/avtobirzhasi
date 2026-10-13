@@ -324,6 +324,7 @@ export function ListingForm({
             <LocationSelector
               value={{ regionId: regionId ?? null, cityId: cityId ?? null, districtId: districtId ?? null }}
               onChange={handleLocationChange}
+              showDistrict={isEdit}
             />
             {errors.region?.message ? (
               <span className="text-[13px] text-destructive">{errors.region.message}</span>
